@@ -2,6 +2,8 @@
 # ============================================================
 #  BackyardFlow POS — Deploy Ubuntu
 #  Uso: sudo bash deploy.sh
+#  Clona el repo, lo copia a /var/www/backyardflow y configura
+#  nginx + gunicorn + systemd
 # ============================================================
 set -euo pipefail
 
@@ -28,13 +30,14 @@ command -v lsb_release &>/dev/null || err "Este script requiere Ubuntu"
 UBUNTU_VER=$(lsb_release -rs)
 ok "Ubuntu $UBUNTU_VER detectado"
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$PROJECT_DIR"
-ok "Directorio: $PROJECT_DIR"
+# Directorio donde está el script (origen del repo clonado)
+SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Usuario que ejecutó sudo (para permisos de archivos)
+# Directorio destino final (donde nginx sirve el sistema)
+DEPLOY_DIR="/var/www/backyardflow"
+
 REAL_USER="${SUDO_USER:-$(whoami)}"
-VENV="$PROJECT_DIR/.venv"
+VENV="$DEPLOY_DIR/.venv"
 SERVICE_NAME="backyardflow"
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -47,12 +50,40 @@ apt-get update -qq
 apt-get install -y -qq \
     python3 python3-pip python3-venv python3-dev \
     nginx curl build-essential libpq-dev \
-    git ufw
+    git ufw rsync
 
 ok "Dependencias instaladas"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 2 — Entorno virtual Python                         ║
+# ║  PASO 2 — Copiar proyecto a /var/www/backyardflow         ║
+# ╚══════════════════════════════════════════════════════════╝
+sep
+info "Copiando proyecto a $DEPLOY_DIR ..."
+
+mkdir -p "$DEPLOY_DIR"
+
+# rsync: copia todos los archivos excepto venv, db, media y .env
+rsync -a --delete \
+    --exclude='.venv/' \
+    --exclude='venv/' \
+    --exclude='db.sqlite3' \
+    --exclude='media/' \
+    --exclude='staticfiles/' \
+    --exclude='logs/' \
+    --exclude='.env' \
+    --exclude='.git/' \
+    --exclude='__pycache__/' \
+    --exclude='*.pyc' \
+    "$SOURCE_DIR/" "$DEPLOY_DIR/"
+
+# Crear carpetas necesarias si no existen
+mkdir -p "$DEPLOY_DIR/media" "$DEPLOY_DIR/logs" "$DEPLOY_DIR/staticfiles"
+
+ok "Archivos copiados a $DEPLOY_DIR"
+cd "$DEPLOY_DIR"
+
+# ╔══════════════════════════════════════════════════════════╗
+# ║  PASO 3 — Entorno virtual Python                         ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
 if [[ ! -d "$VENV" ]]; then
@@ -63,15 +94,15 @@ ok "Entorno virtual: $VENV"
 
 info "Instalando dependencias Python..."
 "$VENV/bin/pip" install -q --upgrade pip
-"$VENV/bin/pip" install -q -r requirements.txt
+"$VENV/bin/pip" install -q -r "$DEPLOY_DIR/requirements.txt"
 "$VENV/bin/pip" install -q gunicorn whitenoise
 ok "Paquetes Python instalados"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 3 — Configuración (.env)                           ║
+# ║  PASO 4 — Configuración (.env)                           ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
-if [[ ! -f "$PROJECT_DIR/.env" ]]; then
+if [[ ! -f "$DEPLOY_DIR/.env" ]]; then
     echo -e "\n${BOLD}  Configuración inicial del sistema${NC}\n"
 
     # ── Servidor ──
@@ -113,7 +144,6 @@ if [[ ! -f "$PROJECT_DIR/.env" ]]; then
         DB_USER="backyarduser"
         DB_PASSWORD='Backyard$2026'
 
-        # Crear usuario y base de datos en PostgreSQL
         info "Configurando PostgreSQL..."
         sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';" 2>/dev/null || \
             warn "El usuario ${DB_USER} ya existe — se continúa"
@@ -135,7 +165,7 @@ if [[ ! -f "$PROJECT_DIR/.env" ]]; then
     # Generar SECRET_KEY
     SECRET_KEY=$("$VENV/bin/python" -c "import secrets; print(secrets.token_urlsafe(50))")
 
-    cat > "$PROJECT_DIR/.env" <<EOF
+    cat > "$DEPLOY_DIR/.env" <<EOF
 # BackyardFlow POS — Configuración
 SECRET_KEY=${SECRET_KEY}
 DEBUG=False
@@ -160,30 +190,28 @@ RESTAURANT_PHONE=${RESTAURANT_PHONE:-}
 CURRENCY_SYMBOL=${CURRENCY_SYMBOL}
 TAX_PERCENT=${TAX_PERCENT}
 EOF
-    chmod 640 "$PROJECT_DIR/.env"
-    ok ".env creado"
+    chmod 640 "$DEPLOY_DIR/.env"
+    ok ".env creado en $DEPLOY_DIR"
 else
     ok ".env existente — usando configuración guardada"
 fi
 
-# Cargar variables (usar eval para manejar valores con comillas simples)
-set -o allexport
+# Cargar variables (maneja valores con comillas simples)
 while IFS='=' read -r key value; do
     [[ -z "$key" || "$key" == \#* ]] && continue
-    # Quitar comillas simples o dobles envolventes del valor
     value="${value#\'}" ; value="${value%\'}"
     value="${value#\"}" ; value="${value%\"}"
     export "$key=$value"
-done < "$PROJECT_DIR/.env"
-set +o allexport
+done < "$DEPLOY_DIR/.env"
 
 export DJANGO_SETTINGS_MODULE="backyardflow.settings_prod"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 4 — Base de datos                                  ║
+# ║  PASO 5 — Base de datos                                  ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
 info "Ejecutando migraciones..."
+cd "$DEPLOY_DIR"
 "$VENV/bin/python" manage.py migrate --run-syncdb
 ok "Base de datos lista"
 
@@ -207,7 +235,7 @@ else:
 "
 ok "Usuario administrador listo"
 
-info "Configurando datos del local en la base de datos..."
+info "Configurando datos del local..."
 "$VENV/bin/python" manage.py shell -c "
 from config.models import SystemSettings
 from decimal import Decimal
@@ -227,22 +255,22 @@ print(f'  → Local: {s.restaurant_name}')
 ok "Datos del local guardados"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 5 — Archivos estáticos                             ║
+# ║  PASO 6 — Archivos estáticos                             ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
-info "Recolectando archivos estáticos..."
+info "Recolectando archivos estáticos en $DEPLOY_DIR/staticfiles/ ..."
 "$VENV/bin/python" manage.py collectstatic --noinput -v 0
 ok "Archivos estáticos listos"
 
-# ── Carpetas y permisos ───────────────────────────────────────
-mkdir -p "$PROJECT_DIR/media" "$PROJECT_DIR/logs"
-chown -R "$REAL_USER":www-data "$PROJECT_DIR"
-chmod -R 755 "$PROJECT_DIR"
-chmod 640 "$PROJECT_DIR/.env"
-chmod 775 "$PROJECT_DIR/media" "$PROJECT_DIR/logs"
+# Permisos finales
+chown -R www-data:www-data "$DEPLOY_DIR"
+chmod -R 755 "$DEPLOY_DIR"
+chmod 640 "$DEPLOY_DIR/.env"
+chmod 775 "$DEPLOY_DIR/media" "$DEPLOY_DIR/logs"
+ok "Permisos configurados (www-data)"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 6 — Servicio systemd (Gunicorn)                    ║
+# ║  PASO 7 — Servicio systemd (Gunicorn)                    ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
 info "Creando servicio systemd..."
@@ -253,17 +281,17 @@ Description=BackyardFlow POS (Gunicorn)
 After=network.target
 
 [Service]
-User=${REAL_USER}
+User=www-data
 Group=www-data
-WorkingDirectory=${PROJECT_DIR}
-EnvironmentFile=${PROJECT_DIR}/.env
+WorkingDirectory=${DEPLOY_DIR}
+EnvironmentFile=${DEPLOY_DIR}/.env
 Environment="DJANGO_SETTINGS_MODULE=backyardflow.settings_prod"
 ExecStart=${VENV}/bin/gunicorn \\
     --workers 3 \\
     --bind unix:/run/${SERVICE_NAME}.sock \\
     --timeout 120 \\
-    --access-logfile ${PROJECT_DIR}/logs/access.log \\
-    --error-logfile ${PROJECT_DIR}/logs/error.log \\
+    --access-logfile ${DEPLOY_DIR}/logs/access.log \\
+    --error-logfile ${DEPLOY_DIR}/logs/error.log \\
     backyardflow.wsgi:application
 ExecReload=/bin/kill -s HUP \$MAINPID
 Restart=on-failure
@@ -286,10 +314,10 @@ else
 fi
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 7 — nginx                                          ║
+# ║  PASO 8 — nginx                                          ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
-info "Configurando nginx..."
+info "Configurando nginx para servir desde $DEPLOY_DIR ..."
 
 cat > "/etc/nginx/sites-available/${SERVICE_NAME}" <<EOF
 server {
@@ -298,25 +326,24 @@ server {
 
     client_max_body_size 20M;
 
-    # Logs
-    access_log ${PROJECT_DIR}/logs/nginx_access.log;
-    error_log  ${PROJECT_DIR}/logs/nginx_error.log;
+    access_log ${DEPLOY_DIR}/logs/nginx_access.log;
+    error_log  ${DEPLOY_DIR}/logs/nginx_error.log;
 
-    # Archivos estáticos
+    # Archivos estáticos — servidos directo por nginx (sin pasar por Django)
     location /static/ {
-        alias ${PROJECT_DIR}/staticfiles/;
+        alias ${DEPLOY_DIR}/staticfiles/;
         expires 30d;
         add_header Cache-Control "public, immutable";
         gzip_static on;
     }
 
-    # Archivos de media (imágenes subidas)
+    # Archivos subidos por usuarios
     location /media/ {
-        alias ${PROJECT_DIR}/media/;
+        alias ${DEPLOY_DIR}/media/;
         expires 7d;
     }
 
-    # Proxy a Gunicorn
+    # Todo lo demás → Gunicorn → Django
     location / {
         proxy_pass          http://unix:/run/${SERVICE_NAME}.sock;
         proxy_set_header    Host \$host;
@@ -329,17 +356,16 @@ server {
 }
 EOF
 
-# Activar sitio y desactivar default
 ln -sf "/etc/nginx/sites-available/${SERVICE_NAME}" \
        "/etc/nginx/sites-enabled/${SERVICE_NAME}"
 rm -f /etc/nginx/sites-enabled/default
 
 nginx -t
 systemctl reload nginx
-ok "nginx configurado"
+ok "nginx configurado — sirviendo desde $DEPLOY_DIR"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 8 — Firewall                                       ║
+# ║  PASO 9 — Firewall                                       ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
 info "Configurando firewall UFW..."
@@ -349,7 +375,7 @@ ufw --force enable >/dev/null
 ok "Firewall activo (SSH + HTTP/HTTPS permitidos)"
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║  PASO 9 — SSL con Let's Encrypt (opcional)               ║
+# ║  PASO 10 — SSL con Let's Encrypt (opcional)              ║
 # ╚══════════════════════════════════════════════════════════╝
 sep
 if [[ "$DOMAIN" != "localhost" && "$DOMAIN" != "127.0.0.1" ]] && \
@@ -374,22 +400,20 @@ echo -e "${BOLD}═════════════════════�
 echo -e "${GREEN}${BOLD}  DEPLOY COMPLETADO${NC}"
 echo -e "${BOLD}════════════════════════════════════════════════════════${NC}"
 echo
-echo -e "  ${BOLD}URL:${NC}        http://${DOMAIN}"
-echo -e "  ${BOLD}Usuario:${NC}    ${ADMIN_USERNAME}"
-echo -e "  ${BOLD}Logs:${NC}       ${PROJECT_DIR}/logs/"
+echo -e "  ${BOLD}Directorio:${NC}  $DEPLOY_DIR"
+echo -e "  ${BOLD}URL:${NC}         http://${DOMAIN}"
+echo -e "  ${BOLD}Usuario:${NC}     ${ADMIN_USERNAME}"
+echo -e "  ${BOLD}Estáticos:${NC}   $DEPLOY_DIR/staticfiles/  (nginx directo)"
+echo -e "  ${BOLD}Media:${NC}       $DEPLOY_DIR/media/         (nginx directo)"
+echo -e "  ${BOLD}Logs:${NC}        $DEPLOY_DIR/logs/"
 echo
 echo -e "  ${BOLD}Comandos útiles:${NC}"
-echo -e "    ${CYAN}systemctl status ${SERVICE_NAME}${NC}       # estado del servicio"
-echo -e "    ${CYAN}journalctl -u ${SERVICE_NAME} -f${NC}        # logs en vivo"
-echo -e "    ${CYAN}systemctl restart ${SERVICE_NAME}${NC}      # reiniciar app"
-echo -e "    ${CYAN}systemctl reload nginx${NC}                 # recargar nginx"
-echo -e "    ${CYAN}source .env && python manage.py ...${NC}    # comandos Django"
+echo -e "    ${CYAN}systemctl status ${SERVICE_NAME}${NC}         # estado"
+echo -e "    ${CYAN}journalctl -u ${SERVICE_NAME} -f${NC}          # logs en vivo"
+echo -e "    ${CYAN}systemctl restart ${SERVICE_NAME}${NC}        # reiniciar app"
+echo -e "    ${CYAN}systemctl reload nginx${NC}                   # recargar nginx"
 echo
 echo -e "  ${BOLD}Para actualizar el sistema:${NC}"
-echo -e "    ${CYAN}git pull${NC}"
-echo -e "    ${CYAN}source .venv/bin/activate${NC}"
-echo -e "    ${CYAN}pip install -r requirements.txt${NC}"
-echo -e "    ${CYAN}DJANGO_SETTINGS_MODULE=backyardflow.settings_prod python manage.py migrate${NC}"
-echo -e "    ${CYAN}DJANGO_SETTINGS_MODULE=backyardflow.settings_prod python manage.py collectstatic --noinput${NC}"
-echo -e "    ${CYAN}sudo systemctl restart ${SERVICE_NAME}${NC}"
+echo -e "    ${CYAN}cd $SOURCE_DIR && git pull${NC}"
+echo -e "    ${CYAN}sudo bash deploy.sh${NC}   # re-copia y reinicia todo"
 echo
