@@ -144,7 +144,7 @@ ALLOWED_HOSTS=${DOMAIN},www.${DOMAIN},localhost,127.0.0.1
 DB_ENGINE=${DB_ENGINE}
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER:-}
-DB_PASSWORD=${DB_PASSWORD:-}
+DB_PASSWORD='${DB_PASSWORD:-}'
 DB_HOST=${DB_HOST:-}
 DB_PORT=${DB_PORT:-}
 
@@ -166,10 +166,15 @@ else
     ok ".env existente — usando configuración guardada"
 fi
 
-# Cargar variables
+# Cargar variables (usar eval para manejar valores con comillas simples)
 set -o allexport
-# shellcheck disable=SC1091
-source "$PROJECT_DIR/.env"
+while IFS='=' read -r key value; do
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    # Quitar comillas simples o dobles envolventes del valor
+    value="${value#\'}" ; value="${value%\'}"
+    value="${value#\"}" ; value="${value%\"}"
+    export "$key=$value"
+done < "$PROJECT_DIR/.env"
 set +o allexport
 
 export DJANGO_SETTINGS_MODULE="backyardflow.settings_prod"
