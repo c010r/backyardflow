@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from backyardflow.roles import role_required
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.utils import timezone
@@ -255,6 +255,19 @@ class CashRegisterUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, 'Caja actualizada.')
+        return super().form_valid(form)
+
+
+class CashRegisterDeleteView(LoginRequiredMixin, DeleteView):
+    model = CashRegister
+    template_name = 'cash_register/register_confirm_delete.html'
+    success_url = reverse_lazy('cash_register:register_list')
+
+    def form_valid(self, form):
+        if self.object.sessions.filter(status='OPEN').exists():
+            messages.error(self.request, 'No se puede eliminar una caja con sesión abierta.')
+            return redirect(self.success_url)
+        messages.success(self.request, f'Caja "{self.object.name}" eliminada.')
         return super().form_valid(form)
 
 

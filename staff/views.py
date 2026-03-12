@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from backyardflow.roles import role_required
-from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.utils import timezone
@@ -110,6 +110,30 @@ class StaffMemberUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, 'Personal actualizado.')
+        return super().form_valid(form)
+
+
+class StaffMemberDeleteView(LoginRequiredMixin, DeleteView):
+    model = StaffMember
+    template_name = 'staff/member_confirm_delete.html'
+    success_url = reverse_lazy('staff:member_list')
+
+    def form_valid(self, form):
+        self.object.active = False
+        self.object.save()
+        messages.success(self.request, f'{self.object.full_name} desactivado del sistema.')
+        return redirect(self.success_url)
+
+
+class WorkShiftDeleteView(LoginRequiredMixin, DeleteView):
+    model = WorkShift
+    template_name = 'staff/shift_confirm_delete.html'
+
+    def get_success_url(self):
+        return reverse_lazy('staff:shift_list', kwargs={'member_pk': self.object.staff_member.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Turno eliminado.')
         return super().form_valid(form)
 
 
