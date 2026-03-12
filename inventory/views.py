@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from backyardflow.roles import role_required
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -10,7 +11,7 @@ from .models import Ingredient, IngredientCategory, StockMovement, Supplier, Pur
 from .forms import IngredientForm, StockMovementForm, SupplierForm, PurchaseOrderForm, PurchaseOrderItemFormSet
 
 
-@login_required
+@role_required('inventory')
 def inventory_dashboard(request):
     ingredients = Ingredient.objects.filter(active=True).select_related('category', 'supplier')
     low_stock = [i for i in ingredients if i.is_low_stock]
@@ -194,7 +195,7 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-@login_required
+@role_required('inventory')
 def receive_purchase_order(request, pk):
     order = get_object_or_404(PurchaseOrder, pk=pk)
     if request.method == 'POST':
@@ -230,7 +231,7 @@ def receive_purchase_order(request, pk):
     return render(request, 'inventory/receive_purchase_order.html', {'order': order})
 
 
-@login_required
+@role_required('inventory')
 def low_stock_alert(request):
     ingredients = Ingredient.objects.filter(active=True)
     low_stock = [i for i in ingredients if i.is_low_stock]

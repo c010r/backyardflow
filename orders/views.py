@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from backyardflow.roles import role_required
 from django.views.generic import ListView, CreateView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -14,7 +15,7 @@ from menu.models import MenuItem, MenuCategory
 from tables.models import Table
 
 
-@login_required
+@role_required('orders')
 def orders_dashboard(request):
     active_orders = Order.objects.filter(
         status__in=['PENDING', 'IN_PROGRESS', 'READY', 'DELIVERED']
@@ -69,7 +70,7 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-@login_required
+@role_required('orders')
 def order_create(request):
     if request.method == 'POST':
         form = OrderForm(request.POST)
@@ -97,7 +98,7 @@ def order_create(request):
     return render(request, 'orders/order_form.html', {'form': form})
 
 
-@login_required
+@role_required('orders')
 def add_item_to_order(request, order_pk):
     if request.method == 'POST':
         order = get_object_or_404(Order, pk=order_pk)
@@ -143,7 +144,7 @@ def add_item_to_order(request, order_pk):
     return JsonResponse({'success': False}, status=400)
 
 
-@login_required
+@role_required('orders')
 def remove_item_from_order(request, order_pk, item_pk):
     if request.method == 'POST':
         order = get_object_or_404(Order, pk=order_pk)
@@ -157,7 +158,7 @@ def remove_item_from_order(request, order_pk, item_pk):
     return JsonResponse({'success': False}, status=400)
 
 
-@login_required
+@role_required('orders')
 def update_item_quantity(request, order_pk, item_pk):
     if request.method == 'POST':
         order = get_object_or_404(Order, pk=order_pk)
@@ -177,7 +178,7 @@ def update_item_quantity(request, order_pk, item_pk):
     return JsonResponse({'success': False}, status=400)
 
 
-@login_required
+@role_required('orders')
 def update_order_status(request, pk):
     if request.method == 'POST':
         order = get_object_or_404(Order, pk=pk)
@@ -202,7 +203,7 @@ def update_order_status(request, pk):
     return JsonResponse({'success': False}, status=400)
 
 
-@login_required
+@role_required('kitchen', 'orders')
 def update_item_status(request, item_pk):
     if request.method == 'POST':
         item = get_object_or_404(OrderItem, pk=item_pk)
@@ -217,7 +218,7 @@ def update_item_status(request, item_pk):
     return JsonResponse({'success': False}, status=400)
 
 
-@login_required
+@role_required('kitchen')
 def kitchen_display(request):
     items = OrderItem.objects.filter(
         status__in=['PENDING', 'PREPARING']
@@ -241,7 +242,7 @@ def kitchen_display(request):
     return render(request, 'orders/kitchen_display.html', context)
 
 
-@login_required
+@role_required('orders', 'cash_register')
 def close_order(request, pk):
     order = get_object_or_404(Order, pk=pk)
     if request.method == 'POST':

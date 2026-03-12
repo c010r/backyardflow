@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from backyardflow.roles import role_required
 from django.views.generic import ListView, CreateView, UpdateView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -13,7 +14,7 @@ from .forms import (StaffMemberForm, WorkShiftForm, SalaryAdvanceForm,
                     SalarySettlementForm, UserCreationWithStaffForm)
 
 
-@login_required
+@role_required('staff')
 def staff_dashboard(request):
     staff = StaffMember.objects.filter(active=True).select_related('user')
     today = timezone.now().date()
@@ -79,7 +80,7 @@ class StaffMemberDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-@login_required
+@role_required('staff')
 def staff_member_create(request):
     if request.method == 'POST':
         user_form = UserCreationWithStaffForm(request.POST)
@@ -167,7 +168,7 @@ class SalaryAdvanceCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-@login_required
+@role_required('staff')
 def generate_settlement(request, member_pk):
     member = get_object_or_404(StaffMember, pk=member_pk)
 
@@ -298,7 +299,7 @@ class SalarySettlementDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-@login_required
+@role_required('staff')
 def approve_settlement(request, pk):
     settlement = get_object_or_404(SalarySettlement, pk=pk, status='DRAFT')
     if request.method == 'POST':
@@ -308,7 +309,7 @@ def approve_settlement(request, pk):
     return redirect('staff:settlement_detail', pk=pk)
 
 
-@login_required
+@role_required('staff')
 def mark_settlement_paid(request, pk):
     settlement = get_object_or_404(SalarySettlement, pk=pk, status='APPROVED')
     if request.method == 'POST':
@@ -321,7 +322,7 @@ def mark_settlement_paid(request, pk):
     return redirect('staff:settlement_detail', pk=pk)
 
 
-@login_required
+@role_required('staff')
 def work_schedule(request):
     """Weekly calendar view of work schedule"""
     today = timezone.now().date()

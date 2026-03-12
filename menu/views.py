@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from backyardflow.roles import role_required
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -9,7 +10,7 @@ from .models import MenuItem, MenuCategory, Recipe, RecipeIngredient
 from .forms import MenuItemForm, MenuCategoryForm, RecipeForm, RecipeIngredientFormSet
 
 
-@login_required
+@role_required('menu')
 def menu_dashboard(request):
     items = MenuItem.objects.filter(active=True).select_related('category')
     categories = MenuCategory.objects.filter(active=True)
@@ -144,7 +145,7 @@ class RecipeDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-@login_required
+@role_required('menu')
 def recipe_create(request, item_pk):
     menu_item = get_object_or_404(MenuItem, pk=item_pk)
 
@@ -179,7 +180,7 @@ def recipe_create(request, item_pk):
     })
 
 
-@login_required
+@role_required('menu')
 def recipe_update(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
     if request.method == 'POST':

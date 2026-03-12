@@ -29,21 +29,28 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarMain">
             <ul class="navbar-nav me-auto">
+                {% if can_tables %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'tables:table_map' %}">
                         <i class="fas fa-table me-1"></i>Mesas
                     </a>
                 </li>
+                {% endif %}
+                {% if can_orders %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'orders:dashboard' %}">
                         <i class="fas fa-receipt me-1"></i>Comandas
                     </a>
                 </li>
+                {% endif %}
+                {% if can_kitchen %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'orders:kitchen_display' %}">
                         <i class="fas fa-fire me-1"></i>Cocina
                     </a>
                 </li>
+                {% endif %}
+                {% if can_menu %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-book-open me-1"></i>Menu
@@ -52,11 +59,21 @@
                         <li><a class="dropdown-item" href="{% url 'menu:dashboard' %}">Dashboard</a></li>
                         <li><a class="dropdown-item" href="{% url 'menu:item_list' %}">Items del Menu</a></li>
                         <li><a class="dropdown-item" href="{% url 'menu:category_list' %}">Categorias</a></li>
+                        {% if can_qr_menu %}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'qr_menu:public_menu' %}">Menu Publico</a></li>
                         <li><a class="dropdown-item" href="{% url 'qr_menu:qr_codes' %}">Codigos QR</a></li>
+                        {% endif %}
                     </ul>
                 </li>
+                {% elif can_qr_menu %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'qr_menu:public_menu' %}">
+                        <i class="fas fa-qrcode me-1"></i>Menu QR
+                    </a>
+                </li>
+                {% endif %}
+                {% if can_inventory %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-boxes-stacked me-1"></i>Inventario
@@ -73,6 +90,8 @@
                         </a></li>
                     </ul>
                 </li>
+                {% endif %}
+                {% if can_cash_register %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-cash-register me-1"></i>Caja
@@ -83,6 +102,8 @@
                         <li><a class="dropdown-item" href="{% url 'cash_register:daily_report' %}">Reporte Diario</a></li>
                     </ul>
                 </li>
+                {% endif %}
+                {% if can_staff %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-users me-1"></i>Personal
@@ -94,6 +115,7 @@
                         <li><a class="dropdown-item" href="{% url 'staff:settlement_list' %}">Liquidaciones</a></li>
                     </ul>
                 </li>
+                {% endif %}
             </ul>
             <ul class="navbar-nav ms-auto align-items-center">
                 <li class="nav-item me-1">

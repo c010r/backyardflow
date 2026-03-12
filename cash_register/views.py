@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from backyardflow.roles import role_required
 from django.views.generic import ListView, CreateView, UpdateView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -12,7 +13,7 @@ from .forms import OpenSessionForm, CloseSessionForm, CashMovementForm, PaymentF
 from orders.models import Order
 
 
-@login_required
+@role_required('cash_register')
 def cash_register_dashboard(request):
     registers = CashRegister.objects.filter(active=True)
     open_sessions = CashSession.objects.filter(status='OPEN').select_related('cash_register', 'operator')
@@ -43,7 +44,7 @@ def cash_register_dashboard(request):
     return render(request, 'cash_register/dashboard.html', context)
 
 
-@login_required
+@role_required('cash_register')
 def open_session(request):
     # Check if current user already has open session
     existing = CashSession.objects.filter(operator=request.user, status='OPEN').first()
@@ -71,7 +72,7 @@ def open_session(request):
     return render(request, 'cash_register/open_session.html', {'form': form})
 
 
-@login_required
+@role_required('cash_register')
 def close_session(request, pk):
     session = get_object_or_404(CashSession, pk=pk, status='OPEN')
 
@@ -129,7 +130,7 @@ class CashMovementCreateView(LoginRequiredMixin, CreateView):
         return ctx
 
 
-@login_required
+@role_required('cash_register')
 def process_payment(request, order_pk):
     order = get_object_or_404(Order, pk=order_pk)
 
@@ -204,7 +205,7 @@ def process_payment(request, order_pk):
     return render(request, 'cash_register/payment_form.html', context)
 
 
-@login_required
+@role_required('cash_register')
 def session_report(request, pk):
     session = get_object_or_404(CashSession, pk=pk)
     movements = session.movements.order_by('created_at')
@@ -257,7 +258,7 @@ class CashRegisterUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-@login_required
+@role_required('cash_register')
 def daily_sales_report(request):
     from django.db.models import Count
     date_str = request.GET.get('date')

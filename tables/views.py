@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from backyardflow.roles import role_required
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -10,7 +11,7 @@ from .models import Table, TableArea, Reservation
 from .forms import TableForm, TableAreaForm, ReservationForm
 
 
-@login_required
+@role_required('tables')
 def table_map(request):
     areas = TableArea.objects.filter(active=True).prefetch_related('tables')
     tables_no_area = Table.objects.filter(area__isnull=True, active=True)
@@ -95,7 +96,7 @@ class TableAreaUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-@login_required
+@role_required('tables')
 def update_table_status(request, pk):
     if request.method == 'POST':
         table = get_object_or_404(Table, pk=pk)
@@ -158,7 +159,7 @@ class ReservationUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-@login_required
+@role_required('tables')
 def generate_table_qr(request, pk):
     table = get_object_or_404(Table, pk=pk)
     result = table.generate_qr()
