@@ -169,6 +169,7 @@ if [[ ! -f "$DEPLOY_DIR/.env" ]]; then
 # BackyardFlow POS — Configuración
 SECRET_KEY=${SECRET_KEY}
 DEBUG=False
+DOMAIN=${DOMAIN}
 ALLOWED_HOSTS=${DOMAIN},www.${DOMAIN},localhost,127.0.0.1
 
 DB_ENGINE=${DB_ENGINE}
@@ -203,6 +204,12 @@ while IFS='=' read -r key value; do
     value="${value#\"}" ; value="${value%\"}"
     export "$key=$value"
 done < "$DEPLOY_DIR/.env"
+
+# DOMAIN: tomar del .env o derivar del primer valor de ALLOWED_HOSTS
+if [[ -z "${DOMAIN:-}" ]]; then
+    DOMAIN=$(echo "${ALLOWED_HOSTS:-localhost}" | cut -d',' -f1)
+fi
+export DOMAIN
 
 export DJANGO_SETTINGS_MODULE="backyardflow.settings_prod"
 
