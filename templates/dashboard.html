@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - BackyardFlow POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-tachometer-alt me-2 text-warning"></i>Dashboard Principal</h2>
+        <span class="text-muted">{{ today }}</span>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-table fa-2x mb-2 opacity-75"></i>
+                    <h3 class="fw-bold mb-0">{{ free_tables }}</h3>
+                    <small>Mesas Libres</small>
+                    <div class="mt-1 opacity-75"><small>{{ total_tables }} total</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 bg-danger text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2 opacity-75"></i>
+                    <h3 class="fw-bold mb-0">{{ open_tables }}</h3>
+                    <small>Mesas Ocupadas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 bg-warning text-dark">
+                <div class="card-body text-center">
+                    <i class="fas fa-receipt fa-2x mb-2 opacity-75"></i>
+                    <h3 class="fw-bold mb-0">{{ pending_orders }}</h3>
+                    <small>Comandas Activas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x mb-2 opacity-75"></i>
+                    <h3 class="fw-bold mb-0">${{ today_sales|floatformat:0 }}</h3>
+                    <small>Ventas Hoy</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 {% if low_stock > 0 %}bg-danger{% else %}bg-info{% endif %} text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2 opacity-75"></i>
+                    <h3 class="fw-bold mb-0">{{ low_stock }}</h3>
+                    <small>Stock Bajo</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 bg-secondary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-id-badge fa-2x mb-2 opacity-75"></i>
+                    <h3 class="fw-bold mb-0">{{ total_staff }}</h3>
+                    <small>Personal Activo</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-bolt me-2"></i>Acciones Rapidas
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'orders:order_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Nueva Comanda
+                        </a>
+                        <a href="{% url 'tables:table_map' %}" class="btn btn-success">
+                            <i class="fas fa-table me-1"></i>Mapa de Mesas
+                        </a>
+                        <a href="{% url 'orders:kitchen_display' %}" class="btn btn-warning">
+                            <i class="fas fa-fire me-1"></i>Display Cocina
+                        </a>
+                        <a href="{% url 'cash_register:open_session' %}" class="btn btn-info text-white">
+                            <i class="fas fa-cash-register me-1"></i>Abrir Caja
+                        </a>
+                        <a href="{% url 'inventory:low_stock_alert' %}" class="btn btn-danger">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Stock Bajo
+                        </a>
+                        <a href="{% url 'tables:reservation_create' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-plus me-1"></i>Nueva Reserva
+                        </a>
+                        <a href="{% url 'staff:shift_create_general' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-clock me-1"></i>Registrar Turno
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Recent Orders -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span><i class="fas fa-receipt me-2"></i>Comandas Activas</span>
+                    <a href="{% url 'orders:order_list' %}" class="btn btn-sm btn-outline-light">Ver Todas</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Comanda</th>
+                                    <th>Mesa</th>
+                                    <th>Estado</th>
+                                    <th>Total</th>
+                                    <th>Hora</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td><strong>{{ order.order_number }}</strong></td>
+                                    <td>{{ order.table|default:"Llevar" }}</td>
+                                    <td>
+                                        <span class="badge
+                                            {% if order.status == 'PENDING' %}bg-warning text-dark
+                                            {% elif order.status == 'IN_PROGRESS' %}bg-primary
+                                            {% elif order.status == 'READY' %}bg-success
+                                            {% elif order.status == 'DELIVERED' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>${{ order.total|floatformat:2 }}</td>
+                                    <td>{{ order.created_at|time:"H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-receipt fa-2x mb-2 d-block"></i>
+                                        No hay comandas activas
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Cash Session -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-cash-register me-2"></i>Sesion de Caja
+                </div>
+                <div class="card-body">
+                    {% if active_session %}
+                    <div class="text-center">
+                        <span class="badge bg-success fs-6 mb-2">ABIERTA</span>
+                        <p class="mb-1"><strong>{{ active_session.cash_register.name }}</strong></p>
+                        <p class="mb-1 text-muted">Operador: {{ active_session.operator.get_full_name|default:active_session.operator.username }}</p>
+                        <p class="mb-3 text-muted">Desde: {{ active_session.opened_at|time:"H:i" }}</p>
+                        <a href="{% url 'cash_register:close_session' active_session.pk %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-lock me-1"></i>Cerrar Caja
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-lock fa-3x mb-2"></i>
+                        <p>No hay sesion abierta</p>
+                        <a href="{% url 'cash_register:open_session' %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-unlock me-1"></i>Abrir Caja
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Low Stock Alert -->
+            {% if low_stock > 0 %}
+            <div class="card border-0 shadow-sm border-danger mb-3">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Alerta de Stock
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">{{ low_stock }} ingrediente(s) con stock bajo.</p>
+                    <a href="{% url 'inventory:low_stock_alert' %}" class="btn btn-danger btn-sm">
+                        Ver Detalle
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

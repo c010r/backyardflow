@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Registrar Movimiento de Stock - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Registrar Movimiento de Stock</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Ingrediente *</label>
+                                {{ form.ingredient }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Tipo de Movimiento *</label>
+                                {{ form.movement_type }}
+                                <small class="text-muted">IN: suma stock | OUT/WASTE: resta | ADJUSTMENT: reemplaza</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Cantidad *</label>
+                                {{ form.quantity }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Costo Unitario ($)</label>
+                                {{ form.unit_cost }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Referencia</label>
+                                {{ form.reference }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Motivo</label>
+                                {{ form.reason }}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'inventory:stock_movement_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Registrar Movimiento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

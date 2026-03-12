@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Horarios Semanales - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-calendar-week me-2 text-primary"></i>Horarios Semanales</h2>
+        <a href="{% url 'staff:shift_create_general' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Registrar Turno
+        </a>
+    </div>
+
+    <!-- Week Navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="?week_start={{ prev_week }}" class="btn btn-outline-secondary">
+            <i class="fas fa-chevron-left me-1"></i>Semana Anterior
+        </a>
+        <h5 class="mb-0 fw-bold">{{ week_start|date:"d/m/Y" }} &mdash; {{ week_end|date:"d/m/Y" }}</h5>
+        <a href="?week_start={{ next_week }}" class="btn btn-outline-secondary">
+            Semana Siguiente <i class="fas fa-chevron-right ms-1"></i>
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0" style="min-width:900px;">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="min-width:160px;">Personal</th>
+                            {% for day in week_days %}
+                            <th class="text-center {% if day == today %}table-warning text-dark{% endif %}" style="min-width:110px;">
+                                {{ day|date:"D" }}<br>
+                                <small class="fw-normal">{{ day|date:"d/m" }}</small>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in schedule %}
+                        <tr>
+                            <td class="fw-semibold align-middle">
+                                <a href="{% url 'staff:member_detail' row.member.pk %}" class="text-decoration-none">
+                                    {{ row.member.full_name }}
+                                </a><br>
+                                <span class="badge bg-secondary" style="font-size:.7rem;">{{ row.member.get_role_display }}</span>
+                            </td>
+                            {% for day, day_shifts in row.day_cells %}
+                            <td class="align-top p-1 {% if day == today %}bg-warning bg-opacity-10{% endif %}">
+                                {% for shift in day_shifts %}
+                                <div class="badge bg-primary d-block mb-1 text-wrap text-start"
+                                     style="font-size:.72rem; white-space:normal; line-height:1.3;">
+                                    {{ shift.start_time|time:"H:i" }}&ndash;{{ shift.end_time|time:"H:i"|default:"?" }}<br>
+                                    <strong>{{ shift.hours_worked }}h</strong>
+                                    {% if shift.notes %}<br><em>{{ shift.notes|truncatechars:18 }}</em>{% endif %}
+                                </div>
+                                {% empty %}
+                                <span class="text-muted" style="font-size:.75rem;">&mdash;</span>
+                                {% endfor %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                                Sin personal activo registrado.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <p class="text-muted small mt-2">
+        <i class="fas fa-info-circle me-1"></i>
+        Haz clic en el nombre del personal para ver detalles y registrar turnos individuales.
+    </p>
+</div>
+{% endblock %}

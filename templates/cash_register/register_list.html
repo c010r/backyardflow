@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Cajas Registradoras - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-cash-register me-2 text-warning"></i>Cajas Registradoras</h2>
+        <a href="{% url 'cash_register:register_create' %}" class="btn btn-success"><i class="fas fa-plus me-1"></i>Nueva Caja</a>
+    </div>
+    <div class="row g-3">
+        {% for reg in registers %}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5>{{ reg.name }}</h5>
+                    <p class="text-muted">{{ reg.location }}</p>
+                    {% if reg.current_session %}
+                    <span class="badge bg-success">Sesion Abierta</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Cerrada</span>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'cash_register:register_update' reg.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-4 text-muted">
+            <p>No hay cajas registradoras.</p>
+            <a href="{% url 'cash_register:register_create' %}" class="btn btn-success">Crear Caja</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

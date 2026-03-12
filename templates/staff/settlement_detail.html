@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Liquidacion - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-file-invoice-dollar me-2"></i>Liquidacion: {{ settlement.staff_member.full_name }}</h2>
+        <div class="d-flex gap-2">
+            {% if settlement.status == 'DRAFT' %}
+            <form method="post" action="{% url 'staff:settlement_approve' settlement.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary"><i class="fas fa-check me-1"></i>Aprobar</button>
+            </form>
+            {% elif settlement.status == 'APPROVED' %}
+            <form method="post" action="{% url 'staff:settlement_paid' settlement.pk %}" class="d-flex gap-2">
+                {% csrf_token %}
+                <select name="payment_method" class="form-select form-select-sm">
+                    <option value="CASH">Efectivo</option>
+                    <option value="TRANSFER">Transferencia</option>
+                </select>
+                <button type="submit" class="btn btn-success"><i class="fas fa-dollar-sign me-1"></i>Marcar Pagado</button>
+            </form>
+            {% endif %}
+            <a href="{% url 'staff:settlement_list' %}" class="btn btn-outline-secondary">Volver</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white">Informacion</div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Personal:</strong> {{ settlement.staff_member.full_name }}</p>
+                    <p class="mb-2"><strong>Rol:</strong> {{ settlement.staff_member.get_role_display }}</p>
+                    <p class="mb-2"><strong>Periodo:</strong> {{ settlement.period_start }} - {{ settlement.period_end }}</p>
+                    <p class="mb-2"><strong>Estado:</strong>
+                        <span class="badge bg-{% if settlement.status == 'PAID' %}success{% elif settlement.status == 'APPROVED' %}primary{% else %}warning text-dark{% endif %}">
+                            {{ settlement.get_status_display }}
+                        </span>
+                    </p>
+                    {% if settlement.payment_date %}
+                    <p class="mb-2"><strong>Pago:</strong> {{ settlement.payment_date }} via {{ settlement.get_payment_method_display }}</p>
+                    {% endif %}
+                    {% if settlement.notes %}
+                    <p class="mb-0"><strong>Notas:</strong> {{ settlement.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Totals -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Resumen</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Salario Base:</span>
+                        <strong class="text-success">+${{ settlement.base_amount }}</strong>
+                    </div>
+                    {% if settlement.bonuses > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Bonificaciones:</span>
+                        <strong class="text-success">+${{ settlement.bonuses }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if settlement.deductions > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Deducciones:</span>
+                        <strong class="text-danger">-${{ settlement.deductions }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if settlement.advances_deducted > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Adelantos:</span>
+                        <strong class="text-danger">-${{ settlement.advances_deducted }}</strong>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <strong>TOTAL:</strong>
+                        <strong class="text-primary fs-5">${{ settlement.total_amount }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Conceptos</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="table-light">
+                                <tr><th>Concepto</th><th>Tipo</th><th>Monto</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in earnings %}
+                                <tr class="table-success">
+                                    <td>{{ item.concept }}</td>
+                                    <td><span class="badge bg-success">Haber</span></td>
+                                    <td class="text-success fw-bold">+${{ item.amount }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% for item in deduction_items %}
+                                <tr class="table-danger">
+                                    <td>{{ item.concept }}</td>
+                                    <td><span class="badge bg-danger">Descuento</span></td>
+                                    <td class="text-danger fw-bold">-${{ item.amount }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <td colspan="2" class="text-end fw-bold">TOTAL NETO:</td>
+                                    <td class="fw-bold fs-6">${{ settlement.total_amount }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

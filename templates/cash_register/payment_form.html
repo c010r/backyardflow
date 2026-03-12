@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Cobrar Comanda - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Cobrar Comanda {{ order.order_number }}</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Order Summary -->
+                    <div class="bg-light rounded p-3 mb-4">
+                        <h6 class="fw-bold mb-2">Resumen de Comanda</h6>
+                        {% for item in order.items.all %}
+                        {% if item.status != 'CANCELLED' %}
+                        <div class="d-flex justify-content-between small">
+                            <span>{{ item.quantity }}x {{ item.menu_item.name }}</span>
+                            <span>${{ item.subtotal }}</span>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% if order.discount_percent > 0 %}
+                        <div class="d-flex justify-content-between small text-danger border-top mt-1 pt-1">
+                            <span>Descuento ({{ order.discount_percent }}%):</span>
+                            <span>-${{ order.discount_amount|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between border-top mt-2 pt-2">
+                            <strong>TOTAL A COBRAR:</strong>
+                            <strong class="text-primary fs-5">${{ order.total|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+
+                    {% if active_session %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-cash-register me-2"></i>
+                        Sesion activa: <strong>{{ active_session.cash_register.name }}</strong>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Metodo de Pago *</label>
+                                {{ form.payment_method }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Monto a Cobrar ($)</label>
+                                {{ form.amount }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Monto Recibido (efectivo)</label>
+                                {{ form.amount_received }}
+                                <small class="text-muted">Solo para pago en efectivo (para calcular vuelto)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Notas</label>
+                                {{ form.notes }}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check me-1"></i>Confirmar Pago - ${{ order.total|floatformat:2 }}
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No hay sesion de caja abierta.
+                        <a href="{% url 'cash_register:open_session' %}" class="btn btn-success btn-sm ms-2">Abrir Sesion</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% block extra_js %}
+<script>
+// Auto-fill amount with order total
+document.getElementById('{{ form.amount.id_for_label }}').value = '{{ order.total|floatformat:2 }}';
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Receta: {{ recipe.menu_item.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-list me-2 text-success"></i>Receta: {{ recipe.menu_item.name }}</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'menu:recipe_update' recipe.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Editar Receta
+            </a>
+            <a href="{% url 'menu:item_list' %}" class="btn btn-outline-secondary">Volver</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    {% if recipe.menu_item.image %}
+                    <img src="{{ recipe.menu_item.image.url }}" class="img-fluid rounded mb-3">
+                    {% endif %}
+                    <h5 class="fw-bold">{{ recipe.menu_item.name }}</h5>
+                    <p class="text-muted">{{ recipe.menu_item.description }}</p>
+                    <hr>
+                    <p class="mb-1"><strong>Precio de Venta:</strong> <span class="text-primary fs-5">${{ recipe.menu_item.price }}</span></p>
+                    <p class="mb-1"><strong>Costo Receta:</strong> <span class="text-danger">${{ total_cost|floatformat:2 }}</span></p>
+                    <p class="mb-1"><strong>Ganancia:</strong> <span class="text-success fw-bold">${{ recipe.menu_item.gross_profit|floatformat:2 }}</span></p>
+                    <p class="mb-1"><strong>Margen:</strong> <span class="badge bg-{% if recipe.menu_item.profit_margin > 50 %}success{% elif recipe.menu_item.profit_margin > 30 %}warning{% else %}danger{% endif %}">
+                        {{ recipe.menu_item.profit_margin|floatformat:1 }}%
+                    </span></p>
+                    <hr>
+                    <p class="mb-1"><strong>Tiempo Prep.:</strong> {{ recipe.preparation_time }} min</p>
+                    <p class="mb-0"><strong>Porciones:</strong> {{ recipe.servings }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white">Ingredientes</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ingrediente</th>
+                                    <th>Cantidad</th>
+                                    <th>Unidad</th>
+                                    <th>Costo Unitario</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ri in ingredients %}
+                                <tr>
+                                    <td>{{ ri.ingredient.name }}</td>
+                                    <td>{{ ri.quantity }}</td>
+                                    <td>{{ ri.get_unit_display }}</td>
+                                    <td>${{ ri.ingredient.cost_per_unit }}</td>
+                                    <td class="fw-bold">${{ ri.calculate_cost|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted">Sin ingredientes</td></tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">Costo Total:</td>
+                                    <td class="fw-bold">${{ total_cost|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% if recipe.instructions %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Instrucciones</div>
+                <div class="card-body">
+                    <p class="mb-0" style="white-space: pre-wrap;">{{ recipe.instructions }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

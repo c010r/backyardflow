@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Movimiento de Caja - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Nuevo Movimiento de Caja</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3"><label class="form-label fw-semibold">Sesion *</label>{{ form.session }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Tipo *</label>{{ form.movement_type }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Monto ($) *</label>{{ form.amount }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Descripcion *</label>{{ form.description }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Referencia</label>{{ form.reference }}</div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'cash_register:dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

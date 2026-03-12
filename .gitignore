@@ -1,0 +1,48 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Variables de entorno (NUNCA subir)
+.env
+
+# Base de datos
+db.sqlite3
+*.db
+
+# Archivos estáticos compilados
+staticfiles/
+
+# Media (archivos subidos por usuarios)
+media/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Django
+*.log
+local_settings.py
+
+# Logs
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Migraciones compiladas (mantener los archivos .py de migraciones)
+# pero ignorar caché
+migrations/__pycache__/
+.claude/

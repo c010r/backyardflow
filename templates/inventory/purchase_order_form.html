@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Orden de Compra - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Nueva Orden de Compra</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-12"><label class="form-label fw-semibold">Proveedor *</label>{{ form.supplier }}</div>
+                            <div class="col-md-6"><label class="form-label fw-semibold">Fecha del Pedido</label>{{ form.order_date }}</div>
+                            <div class="col-md-6"><label class="form-label fw-semibold">Entrega Esperada</label>{{ form.expected_delivery }}</div>
+                            <div class="col-md-6"><label class="form-label fw-semibold">Estado</label>{{ form.status }}</div>
+                            <div class="col-12"><label class="form-label fw-semibold">Notas</label>{{ form.notes }}</div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Reporte de Sesion - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-file-invoice me-2 text-info"></i>Reporte de Sesion</h2>
+        <a href="{% url 'cash_register:dashboard' %}" class="btn btn-outline-secondary">Volver</a>
+    </div>
+
+    <!-- Session Info -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center bg-primary text-white">
+                <div class="card-body">
+                    <i class="fas fa-cash-register fa-2x mb-2"></i>
+                    <h5>{{ session.cash_register.name }}</h5>
+                    <small>{{ session.get_status_display }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center bg-info text-white">
+                <div class="card-body">
+                    <p class="mb-1">Apertura</p>
+                    <h4>${{ session.opening_amount }}</h4>
+                    <small>{{ session.opened_at|date:"d/m H:i" }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center bg-success text-white">
+                <div class="card-body">
+                    <p class="mb-1">Total Ventas</p>
+                    <h4>${{ total_sales|floatformat:2 }}</h4>
+                    <small>{{ payments|length }} pagos</small>
+                </div>
+            </div>
+        </div>
+        {% if session.status == 'CLOSED' %}
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center {% if session.difference >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <div class="card-body">
+                    <p class="mb-1">Diferencia</p>
+                    <h4>${{ session.difference|floatformat:2 }}</h4>
+                    <small>Contado: ${{ session.closing_amount }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row g-3">
+        <!-- By Method -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Ventas por Metodo</div>
+                <div class="card-body p-0">
+                    {% for method, total in total_by_method.items %}
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <span><i class="fas fa-circle text-info me-2"></i>{{ method }}</span>
+                        <strong>${{ total|floatformat:2 }}</strong>
+                    </div>
+                    {% endfor %}
+                    <div class="d-flex justify-content-between p-3 fw-bold bg-light">
+                        <span>TOTAL:</span>
+                        <span class="text-primary">${{ total_sales|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments list -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Detalle de Pagos</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr><th>Hora</th><th>Comanda</th><th>Metodo</th><th>Monto</th><th>Vuelto</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for p in payments %}
+                                <tr>
+                                    <td>{{ p.created_at|time:"H:i" }}</td>
+                                    <td>{{ p.order.order_number }}</td>
+                                    <td><span class="badge bg-info">{{ p.get_payment_method_display }}</span></td>
+                                    <td class="text-success fw-bold">${{ p.amount }}</td>
+                                    <td>{% if p.change_given > 0 %}<span class="text-warning">${{ p.change_given }}</span>{% else %}-{% endif %}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted">Sin pagos</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Orden de Compra #{{ order.pk }} - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-shopping-cart me-2"></i>Orden de Compra #{{ order.pk }}</h2>
+        <div class="d-flex gap-2">
+            {% if order.status in 'PENDING,ORDERED' %}
+            <a href="{% url 'inventory:receive_purchase_order' order.pk %}" class="btn btn-success">
+                <i class="fas fa-check me-1"></i>Recibir Mercaderia
+            </a>
+            {% endif %}
+            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">Volver</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold">Proveedor</h6>
+                    <p class="mb-1"><strong>{{ order.supplier.name }}</strong></p>
+                    {% if order.supplier.contact_name %}<p class="mb-1 text-muted">{{ order.supplier.contact_name }}</p>{% endif %}
+                    {% if order.supplier.phone %}<p class="mb-1 text-muted">{{ order.supplier.phone }}</p>{% endif %}
+                    <hr>
+                    <p class="mb-1"><strong>Estado:</strong>
+                        <span class="badge {% if order.status == 'RECEIVED' %}bg-success{% elif order.status == 'CANCELLED' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </p>
+                    <p class="mb-1"><strong>Fecha:</strong> {{ order.order_date }}</p>
+                    {% if order.expected_delivery %}
+                    <p class="mb-1"><strong>Entrega esperada:</strong> {{ order.expected_delivery }}</p>
+                    {% endif %}
+                    <p class="mb-0"><strong>Total:</strong> <span class="fs-5 fw-bold text-primary">${{ order.total_amount }}</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Items de la Orden</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ingrediente</th>
+                                    <th>Cant. Pedida</th>
+                                    <th>Cant. Recibida</th>
+                                    <th>Costo Unit.</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.ingredient.name }}</td>
+                                    <td>{{ item.quantity_ordered }}</td>
+                                    <td>{{ item.quantity_received }}</td>
+                                    <td>${{ item.unit_cost }}</td>
+                                    <td>${{ item.total_cost|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted py-3">Sin items</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

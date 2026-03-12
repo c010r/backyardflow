@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% block title %}Mapa de Mesas - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold"><i class="fas fa-table me-2 text-success"></i>Mapa de Mesas</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'orders:order_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nueva Comanda
+            </a>
+            <a href="{% url 'tables:table_create' %}" class="btn btn-outline-success">
+                <i class="fas fa-plus me-1"></i>Nueva Mesa
+            </a>
+            <a href="{% url 'tables:area_create' %}" class="btn btn-outline-info">
+                <i class="fas fa-layer-group me-1"></i>Nueva Area
+            </a>
+            <a href="{% url 'tables:reservation_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-calendar me-1"></i>Reservas
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="row g-2 mb-4">
+        <div class="col">
+            <div class="card border-0 bg-success text-white text-center py-2">
+                <strong>{{ stats.free }}</strong><small> Libres</small>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 bg-danger text-white text-center py-2">
+                <strong>{{ stats.occupied }}</strong><small> Ocupadas</small>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 bg-warning text-dark text-center py-2">
+                <strong>{{ stats.reserved }}</strong><small> Reservadas</small>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 bg-info text-white text-center py-2">
+                <strong>{{ stats.cleaning }}</strong><small> Limpieza</small>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 bg-dark text-white text-center py-2">
+                <strong>{{ stats.total }}</strong><small> Total</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="d-flex gap-3 mb-3 flex-wrap">
+        <span class="badge bg-success py-2 px-3">Libre</span>
+        <span class="badge bg-danger py-2 px-3">Ocupada</span>
+        <span class="badge bg-warning text-dark py-2 px-3">Reservada</span>
+        <span class="badge bg-info py-2 px-3">Limpieza</span>
+    </div>
+
+    <!-- Areas with tables -->
+    {% for area in areas %}
+    <div class="mb-4">
+        <h5 class="fw-bold border-bottom pb-2"><i class="fas fa-layer-group me-2"></i>{{ area.name }}</h5>
+        <div class="d-flex flex-wrap gap-3">
+            {% for table in area.tables.all %}
+            {% if table.active %}
+            <div class="table-card card border-0 shadow-sm" style="width: 130px; cursor: pointer;"
+                 onclick="openTableModal({{ table.pk }}, '{{ table.get_status_display }}', '{{ table.status }}')"
+                 data-table-id="{{ table.pk }}">
+                <div class="card-body text-center p-3 {% if table.status == 'FREE' %}bg-success text-white{% elif table.status == 'OCCUPIED' %}bg-danger text-white{% elif table.status == 'RESERVED' %}bg-warning text-dark{% else %}bg-info text-white{% endif %} rounded">
+                    <div class="fs-4 fw-bold">{{ table.number }}</div>
+                    <div class="small">{{ table.get_status_display }}</div>
+                    <div class="small opacity-75"><i class="fas fa-users me-1"></i>{{ table.capacity }}</div>
+                    {% if table.status == 'OCCUPIED' %}
+                    <a href="{% url 'orders:order_create' %}?table={{ table.pk }}" class="btn btn-sm btn-light mt-1" onclick="event.stopPropagation()">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Tables without area -->
+    {% if tables_no_area %}
+    <div class="mb-4">
+        <h5 class="fw-bold border-bottom pb-2"><i class="fas fa-table me-2"></i>Sin Area Asignada</h5>
+        <div class="d-flex flex-wrap gap-3">
+            {% for table in tables_no_area %}
+            {% if table.active %}
+            <div class="table-card card border-0 shadow-sm" style="width: 130px; cursor: pointer;"
+                 onclick="openTableModal({{ table.pk }}, '{{ table.get_status_display }}', '{{ table.status }}')"
+                 data-table-id="{{ table.pk }}">
+                <div class="card-body text-center p-3 {% if table.status == 'FREE' %}bg-success text-white{% elif table.status == 'OCCUPIED' %}bg-danger text-white{% elif table.status == 'RESERVED' %}bg-warning text-dark{% else %}bg-info text-white{% endif %} rounded">
+                    <div class="fs-4 fw-bold">{{ table.number }}</div>
+                    <div class="small">{{ table.get_status_display }}</div>
+                    <div class="small opacity-75"><i class="fas fa-users me-1"></i>{{ table.capacity }}</div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Today's Reservations -->
+    {% if today_reservations %}
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-dark text-white">
+            <i class="fas fa-calendar me-2"></i>Reservas de Hoy
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>Hora</th><th>Cliente</th><th>Mesa</th><th>Personas</th><th>Estado</th><th>Accion</th></tr>
+                </thead>
+                <tbody>
+                    {% for res in today_reservations %}
+                    <tr>
+                        <td>{{ res.time|time:"H:i" }}</td>
+                        <td><strong>{{ res.customer_name }}</strong><br><small>{{ res.customer_phone }}</small></td>
+                        <td>Mesa {{ res.table.number }}</td>
+                        <td>{{ res.party_size }}</td>
+                        <td><span class="badge bg-{% if res.status == 'CONFIRMED' %}success{% else %}warning text-dark{% endif %}">{{ res.get_status_display }}</span></td>
+                        <td><a href="{% url 'tables:reservation_update' res.pk %}" class="btn btn-sm btn-outline-primary">Gestionar</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Table Status Modal -->
+<div class="modal fade" id="tableModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h6 class="modal-title">Cambiar Estado de Mesa</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Estado actual: <strong id="current-status"></strong></p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="changeStatus('FREE')"><i class="fas fa-check me-1"></i>Libre</button>
+                    <button class="btn btn-danger" onclick="changeStatus('OCCUPIED')"><i class="fas fa-users me-1"></i>Ocupada</button>
+                    <button class="btn btn-warning text-dark" onclick="changeStatus('RESERVED')"><i class="fas fa-calendar me-1"></i>Reservada</button>
+                    <button class="btn btn-info" onclick="changeStatus('CLEANING')"><i class="fas fa-broom me-1"></i>Limpieza</button>
+                </div>
+                <hr>
+                <div class="d-grid gap-2">
+                    <a id="new-order-btn" href="#" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-receipt me-1"></i>Nueva Comanda
+                    </a>
+                    <a id="edit-table-btn" href="#" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-edit me-1"></i>Editar Mesa
+                    </a>
+                    <a id="gen-qr-btn" href="#" class="btn btn-outline-dark btn-sm">
+                        <i class="fas fa-qrcode me-1"></i>Generar QR
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTableId = null;
+
+function openTableModal(tableId, statusDisplay, status) {
+    currentTableId = tableId;
+    document.getElementById('current-status').textContent = statusDisplay;
+    document.getElementById('new-order-btn').href = '/orders/create/?table=' + tableId;
+    document.getElementById('edit-table-btn').href = '/tables/' + tableId + '/edit/';
+    document.getElementById('gen-qr-btn').href = '/tables/' + tableId + '/qr/';
+    new bootstrap.Modal(document.getElementById('tableModal')).show();
+}
+
+function changeStatus(status) {
+    if (!currentTableId) return;
+    fetch('/tables/' + currentTableId + '/status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: 'status=' + status
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('tableModal')).hide();
+            setTimeout(() => location.reload(), 300);
+        }
+    });
+}
+</script>
+{% endblock %}

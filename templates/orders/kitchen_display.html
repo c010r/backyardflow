@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocina - BackyardFlow POS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #1a1a2e; color: #fff; }
+        .kitchen-card { border-radius: 12px; }
+        .item-pending { border-left: 5px solid #ffc107; }
+        .item-preparing { border-left: 5px solid #0d6efd; }
+        .timer { font-size: 0.85rem; }
+        .auto-refresh-bar { height: 4px; background: #0d6efd; transition: width 30s linear; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand fw-bold"><i class="fas fa-fire me-2 text-warning"></i>COCINA - BackyardFlow POS</span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-warning text-dark fs-6">PENDIENTES: {{ total_pending }}</span>
+                <span class="badge bg-primary fs-6">PREPARANDO: {{ total_preparing }}</span>
+                <span class="text-muted small" id="clock"></span>
+                <a href="/" class="btn btn-sm btn-outline-light">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+    <div class="auto-refresh-bar" id="refresh-bar" style="width: 100%;"></div>
+
+    <div class="container-fluid py-3">
+        {% if orders_with_items %}
+        <div class="row g-3">
+            {% for entry in orders_with_items %}
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="card kitchen-card bg-dark border-secondary">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold fs-5">{{ entry.order.order_number }}</span>
+                        <div>
+                            {% if entry.order.table %}
+                            <span class="badge bg-success">Mesa {{ entry.order.table.number }}</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Para Llevar</span>
+                            {% endif %}
+                            <span class="badge bg-secondary ms-1 timer">{{ entry.order.created_at|timesince }}</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        {% for item in entry.items %}
+                        <div class="rounded p-2 mb-2 {% if item.status == 'PENDING' %}item-pending bg-warning bg-opacity-10{% else %}item-preparing bg-primary bg-opacity-10{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fs-5 fw-bold">{{ item.quantity }}x</span>
+                                    <span class="fw-semibold ms-1">{{ item.menu_item.name }}</span>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    {% if item.status == 'PENDING' %}
+                                    <button onclick="markPreparing({{ item.pk }})" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-fire"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if item.status == 'PREPARING' %}
+                                    <button onclick="markReady({{ item.pk }})" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> LISTO
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if item.notes %}
+                            <div class="text-warning small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ item.notes }}</div>
+                            {% endif %}
+                            <div class="mt-1">
+                                <span class="badge {% if item.status == 'PENDING' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                                    {{ item.get_status_display }}
+                                </span>
+                                <small class="text-muted ms-1">{{ item.sent_to_kitchen_at|timesince }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if entry.order.notes %}
+                        <div class="alert alert-warning p-2 mb-0 small">
+                            <i class="fas fa-sticky-note me-1"></i>{{ entry.order.notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-check-circle fa-5x text-success mb-3 d-block"></i>
+            <h3 class="text-success">Cocina al dia!</h3>
+            <p class="text-muted">No hay pedidos pendientes en este momento.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const csrfToken = '{{ csrf_token }}';
+
+        function markPreparing(itemId) {
+            updateItemStatus(itemId, 'PREPARING');
+        }
+
+        function markReady(itemId) {
+            updateItemStatus(itemId, 'READY');
+        }
+
+        function updateItemStatus(itemId, status) {
+            fetch(`/orders/item/${itemId}/status/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+                body: `status=${status}`
+            })
+            .then(r => r.json())
+            .then(data => { if (data.success) { location.reload(); } });
+        }
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Auto-refresh every 30 seconds
+        const bar = document.getElementById('refresh-bar');
+        bar.style.width = '0%';
+        setTimeout(() => location.reload(), 30000);
+        setTimeout(() => { bar.style.width = '0%'; }, 100);
+    </script>
+</body>
+</html>

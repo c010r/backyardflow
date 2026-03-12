@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Receta - {{ menu_item.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-list me-2 text-success"></i>{{ action }} Receta: {{ menu_item.name }}</h2>
+        <a href="{% url 'menu:item_list' %}" class="btn btn-outline-secondary">Volver</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white">Informacion de la Receta</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Instrucciones</label>
+                            {{ form.instructions }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Porciones</label>
+                            {{ form.servings }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tiempo de Preparacion (min)</label>
+                            {{ form.preparation_time }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Notas</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white">Ingredientes</div>
+                    <div class="card-body">
+                        {{ formset.management_form }}
+                        <div id="formset-container">
+                            {% for ing_form in formset %}
+                            <div class="formset-row border rounded p-3 mb-2 position-relative {% if ing_form.instance.pk %}bg-light{% endif %}">
+                                {% if ing_form.instance.pk %}
+                                <div class="form-check position-absolute" style="top: 8px; right: 8px;">
+                                    {{ ing_form.DELETE }}
+                                    <label class="form-check-label text-danger small">Eliminar</label>
+                                </div>
+                                {% endif %}
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Ingrediente</label>
+                                        {{ ing_form.ingredient }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold">Cantidad</label>
+                                        {{ ing_form.quantity }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold">Unidad</label>
+                                        {{ ing_form.unit }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small fw-semibold">Notas</label>
+                                        {{ ing_form.notes }}
+                                    </div>
+                                </div>
+                                {% for field in ing_form.hidden_fields %}{{ field }}{% endfor %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'menu:item_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Guardar Receta
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

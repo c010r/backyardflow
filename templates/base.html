@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BackyardFlow POS{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <script>
+        // Apply theme before render to avoid flash
+        (function() {
+            const saved = localStorage.getItem('bfTheme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</head>
+<body class="bg-light">
+
+<!-- Top Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="fas fa-utensils me-2 text-warning"></i>BackyardFlow POS
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'tables:table_map' %}">
+                        <i class="fas fa-table me-1"></i>Mesas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'orders:dashboard' %}">
+                        <i class="fas fa-receipt me-1"></i>Comandas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'orders:kitchen_display' %}">
+                        <i class="fas fa-fire me-1"></i>Cocina
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="fas fa-book-open me-1"></i>Menu
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'menu:dashboard' %}">Dashboard</a></li>
+                        <li><a class="dropdown-item" href="{% url 'menu:item_list' %}">Items del Menu</a></li>
+                        <li><a class="dropdown-item" href="{% url 'menu:category_list' %}">Categorias</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'qr_menu:public_menu' %}">Menu Publico</a></li>
+                        <li><a class="dropdown-item" href="{% url 'qr_menu:qr_codes' %}">Codigos QR</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="fas fa-boxes-stacked me-1"></i>Inventario
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'inventory:dashboard' %}">Dashboard</a></li>
+                        <li><a class="dropdown-item" href="{% url 'inventory:ingredient_list' %}">Ingredientes</a></li>
+                        <li><a class="dropdown-item" href="{% url 'inventory:stock_movement_list' %}">Movimientos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'inventory:supplier_list' %}">Proveedores</a></li>
+                        <li><a class="dropdown-item" href="{% url 'inventory:purchase_order_list' %}">Ordenes de Compra</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'inventory:low_stock_alert' %}">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Stock Bajo
+                        </a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="fas fa-cash-register me-1"></i>Caja
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'cash_register:dashboard' %}">Dashboard</a></li>
+                        <li><a class="dropdown-item" href="{% url 'cash_register:open_session' %}">Abrir Sesion</a></li>
+                        <li><a class="dropdown-item" href="{% url 'cash_register:daily_report' %}">Reporte Diario</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="fas fa-users me-1"></i>Personal
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'staff:dashboard' %}">Dashboard</a></li>
+                        <li><a class="dropdown-item" href="{% url 'staff:member_list' %}">Personal</a></li>
+                        <li><a class="dropdown-item" href="{% url 'staff:work_schedule' %}">Horarios</a></li>
+                        <li><a class="dropdown-item" href="{% url 'staff:settlement_list' %}">Liquidaciones</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item me-1">
+                    <button id="theme-toggle" title="Cambiar tema" onclick="toggleTheme()">
+                        <span id="theme-icon">🌙</span>
+                    </button>
+                </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>{{ user.get_full_name|default:user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% if user.is_staff %}
+                        <li><a class="dropdown-item" href="{% url 'config:dashboard' %}">
+                            <i class="fas fa-cog me-2 text-muted"></i>Administración
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li>
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Salir
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main-content" style="margin-top: 56px;">
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div class="container-fluid pt-2">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Footer -->
+<footer class="bg-dark text-light py-3 mt-5">
+    <div class="container-fluid text-center">
+        <small><i class="fas fa-utensils me-1 text-warning"></i>BackyardFlow POS &copy; 2024</small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function toggleTheme() {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('bfTheme', next);
+        updateThemeIcon(next);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('theme-icon');
+        if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    // Set correct icon on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const saved = localStorage.getItem('bfTheme') || 'light';
+        updateThemeIcon(saved);
+    });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

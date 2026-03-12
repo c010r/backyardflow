@@ -1,0 +1,411 @@
+/* BackyardFlow POS - Custom Styles */
+
+:root {
+    --primary: #0d6efd;
+    --success: #198754;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --dark: #212529;
+}
+
+/* ===================== DARK MODE ===================== */
+[data-theme="dark"] {
+    --bs-body-bg: #121212;
+    --bs-body-color: #e0e0e0;
+    --bs-card-bg: #1e1e1e;
+    --bs-border-color: #333;
+    --bs-secondary-bg: #2a2a2a;
+    --bs-tertiary-bg: #2a2a2a;
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: rgba(255,255,255,0.03);
+    --bs-table-hover-bg: rgba(255,255,255,0.05);
+    --bs-table-color: #e0e0e0;
+    --bs-form-select-bg: #2a2a2a;
+    --bs-input-bg: #2a2a2a;
+    --bs-dropdown-bg: #1e1e1e;
+    --bs-dropdown-link-color: #e0e0e0;
+    --bs-dropdown-link-hover-bg: #2a2a2a;
+    --bs-modal-bg: #1e1e1e;
+    --bs-list-group-bg: #1e1e1e;
+    --bs-list-group-color: #e0e0e0;
+    --bs-code-color: #f08d49;
+}
+
+[data-theme="dark"] body {
+    background-color: #121212 !important;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .card {
+    background-color: #1e1e1e !important;
+    border-color: #333 !important;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .card-header {
+    background-color: #252525 !important;
+    border-color: #333 !important;
+}
+
+[data-theme="dark"] .card-footer {
+    background-color: #252525 !important;
+    border-color: #333 !important;
+}
+
+[data-theme="dark"] .table {
+    color: #e0e0e0;
+    border-color: #333;
+}
+
+[data-theme="dark"] .table thead th {
+    background-color: #252525;
+    border-color: #333;
+    color: #ccc;
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(255,255,255,0.03);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .table-hover > tbody > tr:hover > * {
+    background-color: rgba(255,255,255,0.07);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #0d6efd;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: #666;
+}
+
+[data-theme="dark"] .dropdown-menu {
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+[data-theme="dark"] .dropdown-divider {
+    border-color: #333;
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: #1e1e1e;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+    border-color: #333;
+}
+
+[data-theme="dark"] .list-group-item {
+    background-color: #1e1e1e;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .list-group-item:hover {
+    background-color: #252525;
+}
+
+[data-theme="dark"] .breadcrumb {
+    background-color: transparent;
+}
+
+[data-theme="dark"] .breadcrumb-item a {
+    color: #6ea8fe;
+}
+
+[data-theme="dark"] .text-muted {
+    color: #888 !important;
+}
+
+[data-theme="dark"] .text-dark {
+    color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .bg-light {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .bg-white {
+    background-color: #1e1e1e !important;
+}
+
+[data-theme="dark"] .border {
+    border-color: #333 !important;
+}
+
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .border-top {
+    border-color: #333 !important;
+}
+
+[data-theme="dark"] .alert-info {
+    background-color: #0c2d48;
+    border-color: #0a4a7a;
+    color: #7ec8e3;
+}
+
+[data-theme="dark"] .alert-warning {
+    background-color: #332d00;
+    border-color: #665900;
+    color: #ffc107;
+}
+
+[data-theme="dark"] .alert-danger {
+    background-color: #2d0c0c;
+    border-color: #5a1a1a;
+    color: #f8a4a4;
+}
+
+[data-theme="dark"] .alert-success {
+    background-color: #0c2d1a;
+    border-color: #1a5c35;
+    color: #75e0a7;
+}
+
+[data-theme="dark"] .table-card {
+    background-color: #1e1e1e;
+    border-color: #333;
+}
+
+[data-theme="dark"] footer {
+    background-color: #0d0d0d !important;
+}
+
+[data-theme="dark"] hr {
+    border-color: #333;
+}
+
+[data-theme="dark"] .input-group-text {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #aaa;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link {
+    color: #aaa;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+    background-color: #1e1e1e;
+    border-color: #333 #333 #1e1e1e;
+    color: #fff;
+}
+
+[data-theme="dark"] .nav-tabs {
+    border-color: #333;
+}
+
+/* Theme toggle button */
+#theme-toggle {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    transition: background 0.2s;
+    color: rgba(255,255,255,0.8);
+}
+
+#theme-toggle:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* ===================== END DARK MODE ===================== */
+
+/* General */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Navbar */
+.navbar {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Cards */
+.card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+}
+
+/* Table Map */
+.table-card {
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.table-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2) !important;
+}
+
+/* Status badges */
+.status-free { background-color: #198754; }
+.status-occupied { background-color: #dc3545; }
+.status-reserved { background-color: #ffc107; color: #000; }
+.status-cleaning { background-color: #0dcaf0; }
+
+/* Kitchen Display */
+.kitchen-item-card {
+    border-radius: 10px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Progress bars */
+.progress {
+    border-radius: 10px;
+}
+
+/* Forms */
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dashboard stats cards */
+.stat-card {
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+/* Sidebar links */
+.nav-link {
+    transition: background 0.15s;
+}
+
+.nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+/* Table striping */
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Badge pills */
+.badge {
+    border-radius: 20px;
+    padding: 5px 10px;
+}
+
+/* Button groups */
+.btn-group-sm .btn {
+    padding: 3px 8px;
+}
+
+/* Print styles */
+@media print {
+    .navbar, .btn, footer, .card-footer, .alert, .no-print {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+    }
+}
+
+/* QR Codes grid */
+.qr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* Virtual menu */
+.menu-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.menu-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+/* Order detail items */
+#items-tbody tr {
+    transition: background 0.2s;
+}
+
+/* Kitchen auto-refresh indicator */
+.refresh-indicator {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #0d6efd;
+    animation: countdown 30s linear;
+    transform-origin: left;
+}
+
+@keyframes countdown {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+
+    .btn-group-sm .btn {
+        padding: 2px 6px;
+        font-size: 0.75rem;
+    }
+
+    h2 {
+        font-size: 1.4rem;
+    }
+}

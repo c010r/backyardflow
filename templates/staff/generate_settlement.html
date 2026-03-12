@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Generar Liquidacion - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Generar Liquidacion: {{ member.full_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Preview -->
+                    <div class="bg-light rounded p-3 mb-4">
+                        <h6 class="fw-bold">Informacion del Personal</h6>
+                        <p class="mb-1">Rol: {{ member.get_role_display }} | Tipo de pago: {{ member.get_payment_type_display }}</p>
+                        {% if member.payment_type == 'MONTHLY' %}
+                        <p class="mb-1">Salario mensual: <strong>${{ member.base_salary }}</strong></p>
+                        {% else %}
+                        <p class="mb-1">Tarifa: <strong>${{ member.hourly_rate }}/hora</strong></p>
+                        {% endif %}
+                        <p class="mb-0">Base calculada para el periodo: <strong class="text-primary">${{ preview_base|floatformat:2 }}</strong></p>
+                    </div>
+
+                    {% if pending_advances %}
+                    <div class="alert alert-warning">
+                        <strong>Adelantos pendientes a descontar: ${{ advances_total }}</strong>
+                        <ul class="mb-0 mt-1 small">
+                            {% for adv in pending_advances %}
+                            <li>{{ adv.date }}: ${{ adv.amount }} - {{ adv.reason|default:"Sin motivo" }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Periodo Inicio</label>
+                                <input type="date" name="period_start" class="form-control" value="{{ period_start }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Periodo Fin</label>
+                                <input type="date" name="period_end" class="form-control" value="{{ period_end }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Bonificaciones ($)</label>
+                                <input type="number" name="bonuses" class="form-control" value="0" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Deducciones Adicionales ($)</label>
+                                <input type="number" name="deductions" class="form-control" value="0" step="0.01" min="0">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Notas</label>
+                                <textarea name="notes" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'staff:member_detail' member.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-calculator me-1"></i>Calcular y Generar Liquidacion
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

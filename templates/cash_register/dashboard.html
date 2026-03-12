@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Caja - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-cash-register me-2 text-warning"></i>Caja Registradora</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'cash_register:open_session' %}" class="btn btn-success">
+                <i class="fas fa-unlock me-1"></i>Abrir Sesion
+            </a>
+            <a href="{% url 'cash_register:daily_report' %}" class="btn btn-outline-info">
+                <i class="fas fa-chart-bar me-1"></i>Reporte Diario
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white text-center py-3">
+                <i class="fas fa-dollar-sign fa-2x mb-1"></i>
+                <h3 class="fw-bold">${{ today_total|floatformat:0 }}</h3>
+                <small>Ventas Hoy</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-success text-white text-center py-3">
+                <i class="fas fa-unlock fa-2x mb-1"></i>
+                <h3 class="fw-bold">{{ open_sessions|length }}</h3>
+                <small>Sesiones Abiertas</small>
+            </div>
+        </div>
+        {% for method, total in sales_by_method.items %}
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-info text-white text-center py-3">
+                <i class="fas fa-{% if 'Efectivo' in method %}money-bill{% elif 'Tarjeta' in method %}credit-card{% else %}mobile{% endif %} fa-2x mb-1"></i>
+                <h3 class="fw-bold">${{ total|floatformat:0 }}</h3>
+                <small>{{ method }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-3">
+        <!-- Open Sessions -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-lock-open me-2"></i>Sesiones Abiertas
+                </div>
+                <div class="card-body p-0">
+                    {% for session in open_sessions %}
+                    <div class="list-group-item p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ session.cash_register.name }}</h6>
+                                <p class="mb-1 text-muted small">
+                                    Operador: {{ session.operator.get_full_name|default:session.operator.username }}
+                                </p>
+                                <p class="mb-0 small text-muted">
+                                    Apertura: {{ session.opened_at|date:"H:i" }} - Monto: ${{ session.opening_amount }}
+                                </p>
+                            </div>
+                            <div>
+                                <span class="badge bg-success">ABIERTA</span>
+                                <div class="mt-2">
+                                    <a href="{% url 'cash_register:close_session' session.pk %}" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-lock me-1"></i>Cerrar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-4 text-center text-muted">
+                        <i class="fas fa-lock fa-2x mb-2 d-block"></i>
+                        No hay sesiones abiertas.
+                        <br>
+                        <a href="{% url 'cash_register:open_session' %}" class="btn btn-success btn-sm mt-2">Abrir Sesion</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-receipt me-2"></i>Pagos Recientes
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Comanda</th>
+                                    <th>Metodo</th>
+                                    <th>Monto</th>
+                                    <th>Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in recent_payments %}
+                                <tr>
+                                    <td>{{ payment.order.order_number }}</td>
+                                    <td><span class="badge bg-info">{{ payment.get_payment_method_display }}</span></td>
+                                    <td class="fw-bold text-success">${{ payment.amount }}</td>
+                                    <td>{{ payment.created_at|time:"H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center text-muted py-3">Sin pagos hoy</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

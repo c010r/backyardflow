@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% block title %}Comanda {{ order.order_number }} - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-receipt me-2"></i>{{ order.order_number }}</h2>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if order.status not in 'PAID,CANCELLED' %}
+            <a href="{% url 'cash_register:process_payment' order.pk %}" class="btn btn-success">
+                <i class="fas fa-dollar-sign me-1"></i>Cobrar
+            </a>
+            {% endif %}
+            <a href="{% url 'orders:dashboard' %}" class="btn btn-outline-secondary">Volver</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Order Info -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white">Informacion</div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Estado:</strong>
+                        <span class="badge
+                            {% if order.status == 'PENDING' %}bg-warning text-dark
+                            {% elif order.status == 'IN_PROGRESS' %}bg-primary
+                            {% elif order.status == 'READY' %}bg-success
+                            {% elif order.status == 'PAID' %}bg-success
+                            {% elif order.status == 'CANCELLED' %}bg-danger
+                            {% else %}bg-info{% endif %} ms-1">
+                            {{ order.get_status_display }}
+                        </span>
+                    </p>
+                    <p class="mb-2"><strong>Mesa:</strong> {{ order.table|default:"Para Llevar" }}</p>
+                    <p class="mb-2"><strong>Tipo:</strong> {{ order.get_order_type_display }}</p>
+                    <p class="mb-2"><strong>Mozo:</strong> {{ order.waiter|default:"Virtual" }}</p>
+                    <p class="mb-2"><strong>Creada:</strong> {{ order.created_at|date:"d/m/Y H:i" }}</p>
+                    {% if order.notes %}
+                    <p class="mb-0"><strong>Notas:</strong> {{ order.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Totals -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white">Totales</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <strong>${{ order.subtotal|floatformat:2 }}</strong>
+                    </div>
+                    {% if order.discount_percent > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-danger">
+                        <span>Descuento ({{ order.discount_percent }}%):</span>
+                        <strong>-${{ order.discount_amount|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between border-top pt-2">
+                        <strong>TOTAL:</strong>
+                        <strong class="text-primary fs-5">${{ order.total|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Status -->
+            {% if order.status not in 'PAID,CANCELLED' %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">Cambiar Estado</div>
+                <div class="card-body d-grid gap-2">
+                    {% if order.status != 'IN_PROGRESS' %}
+                    <button onclick="changeStatus('IN_PROGRESS')" class="btn btn-primary btn-sm">
+                        <i class="fas fa-fire me-1"></i>En Preparacion
+                    </button>
+                    {% endif %}
+                    {% if order.status == 'IN_PROGRESS' %}
+                    <button onclick="changeStatus('READY')" class="btn btn-success btn-sm">
+                        <i class="fas fa-check me-1"></i>Listo
+                    </button>
+                    {% endif %}
+                    {% if order.status == 'READY' %}
+                    <button onclick="changeStatus('DELIVERED')" class="btn btn-info btn-sm">
+                        <i class="fas fa-walking me-1"></i>Entregado
+                    </button>
+                    {% endif %}
+                    <button onclick="changeStatus('CANCELLED')" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Order Items -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span>Items</span>
+                    {% if order.status not in 'PAID,CANCELLED' %}
+                    <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#addItemPanel">
+                        <i class="fas fa-plus me-1"></i>Agregar Item
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Add item panel -->
+                {% if order.status not in 'PAID,CANCELLED' %}
+                <div class="collapse" id="addItemPanel">
+                    <div class="card-body bg-light border-bottom">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <select id="addItemCategory" class="form-select form-select-sm" onchange="filterItems(this.value)">
+                                    <option value="">Todas las categorias</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <select id="addItemSelect" class="form-select form-select-sm">
+                                    <option value="">Selecciona un item...</option>
+                                    {% for item in menu_items %}
+                                    <option value="{{ item.pk }}" data-price="{{ item.price }}" data-category="{{ item.category.pk|default:'' }}">
+                                        {{ item.name }} - ${{ item.price }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" id="addItemQty" value="1" min="1" class="form-control form-control-sm">
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <input type="text" id="addItemNotes" class="form-control form-control-sm" placeholder="Notas (opcional)">
+                        </div>
+                        <button onclick="addItem()" class="btn btn-success btn-sm mt-2">
+                            <i class="fas fa-plus me-1"></i>Agregar
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Items list -->
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0" id="items-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Estado</th>
+                                    <th>Qty</th>
+                                    <th>P. Unit.</th>
+                                    <th>Subtotal</th>
+                                    <th>Notas</th>
+                                    {% if order.status not in 'PAID,CANCELLED' %}<th></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="items-tbody">
+                                {% for item in items %}
+                                <tr id="item-row-{{ item.pk }}" class="{% if item.status == 'CANCELLED' %}table-secondary text-decoration-line-through{% elif item.status == 'READY' %}table-success{% endif %}">
+                                    <td><strong>{{ item.menu_item.name }}</strong></td>
+                                    <td>
+                                        <span class="badge
+                                            {% if item.status == 'PENDING' %}bg-warning text-dark
+                                            {% elif item.status == 'PREPARING' %}bg-primary
+                                            {% elif item.status == 'READY' %}bg-success
+                                            {% elif item.status == 'DELIVERED' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ item.get_status_display }}
+                                        </span>
+                                        {% if item.status not in 'DELIVERED,CANCELLED' and order.status not in 'PAID,CANCELLED' %}
+                                        <div class="btn-group btn-group-sm mt-1">
+                                            {% if item.status == 'PENDING' %}
+                                            <button onclick="updateItemStatus({{ item.pk }}, 'PREPARING')" class="btn btn-outline-primary" title="Preparando"><i class="fas fa-fire"></i></button>
+                                            {% endif %}
+                                            {% if item.status == 'PREPARING' %}
+                                            <button onclick="updateItemStatus({{ item.pk }}, 'READY')" class="btn btn-outline-success" title="Listo"><i class="fas fa-check"></i></button>
+                                            {% endif %}
+                                            {% if item.status == 'READY' %}
+                                            <button onclick="updateItemStatus({{ item.pk }}, 'DELIVERED')" class="btn btn-outline-info" title="Entregado"><i class="fas fa-walking"></i></button>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.unit_price }}</td>
+                                    <td id="item-subtotal-{{ item.pk }}">${{ item.subtotal }}</td>
+                                    <td><small class="text-muted">{{ item.notes|default:"-" }}</small></td>
+                                    {% if order.status not in 'PAID,CANCELLED' %}
+                                    <td>
+                                        {% if item.status != 'CANCELLED' %}
+                                        <button onclick="removeItem({{ order.pk }}, {{ item.pk }})" class="btn btn-sm btn-outline-danger" title="Cancelar">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center text-muted py-3">Sin items</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const orderId = {{ order.pk }};
+const csrfToken = '{{ csrf_token }}';
+
+function addItem() {
+    const itemId = document.getElementById('addItemSelect').value;
+    const qty = document.getElementById('addItemQty').value;
+    const notes = document.getElementById('addItemNotes').value;
+    if (!itemId) { alert('Selecciona un item'); return; }
+
+    fetch(`/orders/${orderId}/add-item/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+        body: `menu_item_id=${itemId}&quantity=${qty}&notes=${encodeURIComponent(notes)}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { location.reload(); }
+        else { alert(data.error || 'Error al agregar item'); }
+    });
+}
+
+function removeItem(orderId, itemId) {
+    if (!confirm('¿Cancelar este item?')) return;
+    fetch(`/orders/${orderId}/remove-item/${itemId}/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) { location.reload(); } });
+}
+
+function updateItemStatus(itemId, status) {
+    fetch(`/orders/item/${itemId}/status/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+        body: `status=${status}`
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) { location.reload(); } });
+}
+
+function changeStatus(status) {
+    fetch(`/orders/${orderId}/status/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+        body: `status=${status}`
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) { location.reload(); } });
+}
+
+function filterItems(categoryId) {
+    const select = document.getElementById('addItemSelect');
+    const options = select.querySelectorAll('option');
+    options.forEach(opt => {
+        if (!opt.value) return;
+        if (!categoryId || opt.dataset.category == categoryId) {
+            opt.style.display = '';
+        } else {
+            opt.style.display = 'none';
+        }
+    });
+    select.value = '';
+}
+</script>
+{% endblock %}

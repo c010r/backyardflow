@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Personal - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-users me-2 text-secondary"></i>Gestion de Personal</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'staff:member_create' %}" class="btn btn-success">
+                <i class="fas fa-user-plus me-1"></i>Nuevo Personal
+            </a>
+            <a href="{% url 'staff:work_schedule' %}" class="btn btn-outline-primary">
+                <i class="fas fa-calendar me-1"></i>Horarios
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white text-center py-3">
+                <i class="fas fa-users fa-2x mb-1"></i>
+                <h3>{{ total_staff }}</h3>
+                <small>Personal Activo</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark text-center py-3">
+                <i class="fas fa-file-invoice-dollar fa-2x mb-1"></i>
+                <h3>{{ pending_settlements|length }}</h3>
+                <small>Liquidaciones Pendientes</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Staff List -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Personal</span>
+                    <a href="{% url 'staff:member_list' %}" class="btn btn-sm btn-outline-light">Ver Todos</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for member in staff %}
+                    <a href="{% url 'staff:member_detail' member.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ member.full_name }}</strong>
+                                <br><small class="text-muted">{{ member.get_role_display }}</small>
+                            </div>
+                            <span class="badge bg-secondary">{{ member.get_payment_type_display }}</span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="list-group-item text-muted text-center">Sin personal</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Shifts -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Turnos Recientes</span>
+                    <a href="{% url 'staff:shift_create_general' %}" class="btn btn-sm btn-outline-light">+ Turno</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for shift in recent_shifts %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ shift.staff_member.full_name }}</strong>
+                            <small>{{ shift.date }}</small>
+                        </div>
+                        <small class="text-muted">{{ shift.start_time|time:"H:i" }} - {{ shift.end_time|time:"H:i"|default:"?" }} ({{ shift.hours_worked }}h)</small>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-muted text-center">Sin turnos este mes</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlements and Advances -->
+        <div class="col-md-4">
+            {% if pending_settlements %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-exclamation-circle me-2"></i>Liquidaciones Pendientes
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for s in pending_settlements %}
+                    <a href="{% url 'staff:settlement_detail' s.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ s.staff_member.full_name }}</span>
+                            <strong>${{ s.total_amount }}</strong>
+                        </div>
+                        <small class="text-muted">{{ s.period_start }} - {{ s.period_end }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if recent_advances %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Adelantos Pendientes</span>
+                    <a href="{% url 'staff:advance_create' %}" class="btn btn-sm btn-outline-light">+ Adelanto</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for adv in recent_advances %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ adv.staff_member.full_name }}</span>
+                            <strong class="text-danger">${{ adv.amount }}</strong>
+                        </div>
+                        <small class="text-muted">{{ adv.date }} - {{ adv.reason|default:"Sin motivo" }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

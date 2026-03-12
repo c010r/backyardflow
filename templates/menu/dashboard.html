@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Menu - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-book-open me-2 text-warning"></i>Dashboard del Menu</h2>
+        <a href="{% url 'menu:item_create' %}" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Nuevo Item
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white text-center">
+                <div class="card-body"><i class="fas fa-utensils fa-2x mb-2"></i><h3>{{ total_items }}</h3><small>Total Items</small></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-success text-white text-center">
+                <div class="card-body"><i class="fas fa-check-circle fa-2x mb-2"></i><h3>{{ available_items }}</h3><small>Disponibles</small></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-warning text-dark text-center">
+                <div class="card-body"><i class="fas fa-star fa-2x mb-2"></i><h3>{{ featured|length }}</h3><small>Destacados</small></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-info text-white text-center">
+                <div class="card-body"><i class="fas fa-tags fa-2x mb-2"></i><h3>{{ categories|length }}</h3><small>Categorias</small></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profitability -->
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-chart-line me-2"></i>Top 10 Rentabilidad
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Precio</th>
+                                    <th>Costo</th>
+                                    <th>Ganancia</th>
+                                    <th>Margen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in profitable_items %}
+                                <tr>
+                                    <td><strong>{{ data.item.name }}</strong></td>
+                                    <td>${{ data.item.price }}</td>
+                                    <td>${{ data.cost|floatformat:2 }}</td>
+                                    <td class="text-success fw-bold">${{ data.profit|floatformat:2 }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height: 8px;">
+                                                <div class="progress-bar bg-success" style="width: {{ data.margin|floatformat:0 }}%"></div>
+                                            </div>
+                                            <small>{{ data.margin|floatformat:1 }}%</small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted py-3">Sin recetas cargadas para calcular costos.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <!-- Categories -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Categorias</span>
+                    <a href="{% url 'menu:category_create' %}" class="btn btn-sm btn-outline-light">+ Nueva</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for cat in categories %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ cat.name }}</span>
+                        <div>
+                            <span class="badge bg-primary me-1">{{ cat.items.count }} items</span>
+                            <a href="{% url 'menu:category_update' cat.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-muted text-center">Sin categorias</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Featured Items -->
+            {% if featured %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-star me-2"></i>Destacados
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for item in featured %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ item.name }}</span>
+                            <strong>${{ item.price }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Items del Menu - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-utensils me-2 text-warning"></i>Items del Menu</h2>
+        <a href="{% url 'menu:item_create' %}" class="btn btn-success"><i class="fas fa-plus me-1"></i>Nuevo Item</a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" name="search" value="{{ search }}" class="form-control" placeholder="Buscar...">
+                </div>
+                <div class="col-md-3">
+                    <select name="category" class="form-select">
+                        <option value="">Todas las categorias</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="type" class="form-select">
+                        <option value="">Todos los tipos</option>
+                        {% for code, name in item_types %}
+                        <option value="{{ code }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Grid View -->
+    <div class="row g-3">
+        {% for item in items %}
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm h-100 {% if not item.available %}opacity-50{% endif %}">
+                {% if item.image %}
+                <img src="{{ item.image.url }}" class="card-img-top" style="height: 140px; object-fit: cover;" alt="{{ item.name }}">
+                {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center" style="height: 140px;">
+                    <i class="fas fa-{% if item.item_type == 'DRINK' %}cocktail{% elif item.item_type == 'DESSERT' %}ice-cream{% else %}utensils{% endif %} fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="card-title mb-1 fw-bold small">{{ item.name }}</h6>
+                        {% if item.featured %}<i class="fas fa-star text-warning small"></i>{% endif %}
+                    </div>
+                    <p class="mb-1 small text-muted">{{ item.category|default:"Sin cat." }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-primary">${{ item.price }}</span>
+                        {% if item.cost > 0 %}
+                        <small class="text-muted">Margen: {{ item.profit_margin|floatformat:0 }}%</small>
+                        {% endif %}
+                    </div>
+                    {% if not item.available %}
+                    <span class="badge bg-warning text-dark mt-1">No Disponible</span>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent border-0 p-2 d-flex gap-1">
+                    <a href="{% url 'menu:item_update' item.pk %}" class="btn btn-sm btn-outline-primary flex-fill">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% if item.recipe %}
+                    <a href="{% url 'menu:recipe_detail' item.recipe.pk %}" class="btn btn-sm btn-outline-success flex-fill">
+                        <i class="fas fa-list"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'menu:recipe_create' item.pk %}" class="btn btn-sm btn-outline-warning flex-fill" title="Agregar Receta">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'menu:item_delete' item.pk %}" class="btn btn-sm btn-outline-danger flex-fill">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5 text-muted">
+            <i class="fas fa-utensils fa-3x mb-3 d-block"></i>
+            <p>No hay items en el menu.</p>
+            <a href="{% url 'menu:item_create' %}" class="btn btn-success">Crear Item</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

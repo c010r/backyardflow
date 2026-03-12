@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Reservas - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-calendar me-2 text-primary"></i>Reservas</h2>
+        <a href="{% url 'tables:reservation_create' %}" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Nueva Reserva
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-4">
+                    <input type="date" name="date" class="form-control" value="{{ request.GET.date }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">Todos los estados</option>
+                        {% for code, name in statuses %}
+                        <option value="{{ code }}" {% if request.GET.status == code %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Cliente</th>
+                            <th>Mesa</th>
+                            <th>Personas</th>
+                            <th>Estado</th>
+                            <th>Notas</th>
+                            <th>Accion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in reservations %}
+                        <tr class="{% if res.date == today %}table-info{% endif %}">
+                            <td>
+                                <strong>{{ res.date }}</strong><br>
+                                <span class="text-muted">{{ res.time|time:"H:i" }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ res.customer_name }}</strong><br>
+                                <small class="text-muted">{{ res.customer_phone }}</small>
+                            </td>
+                            <td>Mesa {{ res.table.number }}</td>
+                            <td>{{ res.party_size }} personas</td>
+                            <td>
+                                <span class="badge
+                                    {% if res.status == 'CONFIRMED' %}bg-success
+                                    {% elif res.status == 'SEATED' %}bg-primary
+                                    {% elif res.status == 'CANCELLED' %}bg-danger
+                                    {% elif res.status == 'NO_SHOW' %}bg-dark
+                                    {% else %}bg-warning text-dark{% endif %}">
+                                    {{ res.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ res.notes|truncatechars:40|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'tables:reservation_update' res.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center text-muted py-4">Sin reservas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

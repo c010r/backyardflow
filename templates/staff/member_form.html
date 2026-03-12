@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Editar Personal - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>Editar: {{ object.full_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-4"><label class="form-label fw-semibold">Rol</label>{{ form.role }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">DNI</label>{{ form.dni }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Telefono</label>{{ form.phone }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Fecha de Ingreso</label>{{ form.hire_date }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Fecha de Nacimiento</label>{{ form.birth_date }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Tipo de Pago</label>{{ form.payment_type }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Salario Base</label>{{ form.base_salary }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Tarifa Hora</label>{{ form.hourly_rate }}</div>
+                            <div class="col-md-4"><label class="form-label fw-semibold">Contacto Emergencia</label>{{ form.emergency_contact }}</div>
+                            <div class="col-12"><label class="form-label fw-semibold">Direccion</label>{{ form.address }}</div>
+                            <div class="col-12">
+                                <div class="form-check">{{ form.active }}<label class="form-check-label" for="{{ form.active.id_for_label }}">Activo</label></div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'staff:member_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

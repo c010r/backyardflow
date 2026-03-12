@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Usuario{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:500px">
+  <div class="card border-danger border-0 shadow-sm">
+    <div class="card-header bg-danger text-white">
+      <i class="fas fa-exclamation-triangle me-2"></i>Confirmar eliminación
+    </div>
+    <div class="card-body text-center py-4">
+      <p class="fs-5">¿Eliminar el usuario <strong>{{ edit_user.username }}</strong>?</p>
+      <p class="text-muted">Esta acción no se puede deshacer.</p>
+      <form method="post" class="d-flex gap-2 justify-content-center">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger px-4">
+          <i class="fas fa-trash me-1"></i>Eliminar
+        </button>
+        <a href="{% url 'config:user_list' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

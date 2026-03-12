@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Registrar Adelanto - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Registrar Adelanto de Salario</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3"><label class="form-label fw-semibold">Personal *</label>{{ form.staff_member }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Monto ($) *</label>{{ form.amount }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Fecha</label>{{ form.date }}</div>
+                        <div class="mb-3"><label class="form-label fw-semibold">Motivo</label>{{ form.reason }}</div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'staff:dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-warning text-dark fw-bold"><i class="fas fa-save me-1"></i>Registrar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

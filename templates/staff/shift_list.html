@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Turnos - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-clock me-2 text-primary"></i>
+            Turnos {% if member %}de {{ member.full_name }}{% endif %}
+        </h2>
+        <a href="{% if member %}{% url 'staff:shift_create' member.pk %}{% else %}{% url 'staff:shift_create_general' %}{% endif %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Registrar Turno
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            {% if not member %}<th>Personal</th>{% endif %}
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th>Horas</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shift in shifts %}
+                        <tr>
+                            {% if not member %}<td>{{ shift.staff_member.full_name }}</td>{% endif %}
+                            <td>{{ shift.date }}</td>
+                            <td><span class="badge bg-secondary">{{ shift.get_shift_type_display }}</span></td>
+                            <td>{{ shift.start_time|time:"H:i" }}</td>
+                            <td>{{ shift.end_time|time:"H:i"|default:"-" }}</td>
+                            <td><strong>{{ shift.hours_worked }}h</strong></td>
+                            <td><small class="text-muted">{{ shift.notes|default:"-" }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center text-muted py-4">Sin turnos registrados</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

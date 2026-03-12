@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - BackyardFlow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 60px 0 40px; }
+        .category-nav { overflow-x: auto; white-space: nowrap; background: white; padding: 12px; border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+        .category-btn { border-radius: 20px; margin-right: 8px; display: inline-block; }
+        .item-img { height: 200px; object-fit: cover; }
+        .item-placeholder { height: 200px; }
+        .price-badge { font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <!-- Hero -->
+    <div class="hero text-center">
+        <i class="fas fa-utensils fa-3x text-warning mb-3 d-block"></i>
+        <h1 class="fw-bold">BackyardFlow</h1>
+        <p class="text-muted">Menu del Restaurante</p>
+    </div>
+
+    <!-- Category Nav -->
+    <div class="category-nav">
+        <a class="btn btn-primary category-btn" href="#all">Todos</a>
+        {% for cat_data in categories %}
+        <a class="btn btn-outline-primary category-btn" href="#cat-{{ cat_data.category.pk }}">
+            {{ cat_data.category.name }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="container-fluid py-4">
+        <!-- Featured -->
+        {% if featured_items %}
+        <div class="mb-5">
+            <h3 class="fw-bold mb-3"><i class="fas fa-star text-warning me-2"></i>Destacados</h3>
+            <div class="row g-3">
+                {% for item in featured_items %}
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100 border-top border-warning border-3">
+                        {% if item.image %}
+                        <img src="{{ item.image.url }}" class="card-img-top item-img" alt="{{ item.name }}">
+                        {% else %}
+                        <div class="item-placeholder bg-warning bg-opacity-25 d-flex align-items-center justify-content-center">
+                            <i class="fas fa-star fa-3x text-warning"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="fw-bold">{{ item.name }}</h5>
+                            {% if item.description %}<p class="text-muted small">{{ item.description|truncatechars:80 }}</p>{% endif %}
+                            <span class="badge bg-primary price-badge">${{ item.price }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Menu by Category -->
+        {% for cat_data in categories %}
+        <div id="cat-{{ cat_data.category.pk }}" class="mb-5">
+            <h3 class="fw-bold border-bottom pb-2 mb-3">
+                <i class="fas fa-tag me-2 text-primary"></i>{{ cat_data.category.name }}
+            </h3>
+            <div class="row g-3">
+                {% for item in cat_data.items %}
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        {% if item.image %}
+                        <img src="{{ item.image.url }}" class="card-img-top item-img" alt="{{ item.name }}">
+                        {% else %}
+                        <div class="item-placeholder bg-light d-flex align-items-center justify-content-center">
+                            <i class="fas fa-{% if item.item_type == 'DRINK' %}cocktail{% elif item.item_type == 'DESSERT' %}ice-cream{% else %}utensils{% endif %} fa-3x text-muted"></i>
+                        </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h6 class="fw-bold">{{ item.name }}</h6>
+                            {% if item.description %}<p class="text-muted small">{{ item.description|truncatechars:80 }}</p>{% endif %}
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <strong class="text-primary fs-5">${{ item.price }}</strong>
+                                {% if item.preparation_time %}
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>{{ item.preparation_time }}min</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <footer class="bg-dark text-light py-4 text-center">
+        <i class="fas fa-utensils me-2 text-warning"></i>BackyardFlow POS &copy; 2024
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

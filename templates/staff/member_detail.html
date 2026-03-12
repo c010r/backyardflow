@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}{{ member.full_name }} - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="fas fa-user me-2"></i>{{ member.full_name }}</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'staff:generate_settlement' member.pk %}" class="btn btn-success">
+                <i class="fas fa-file-invoice me-1"></i>Generar Liquidacion
+            </a>
+            <a href="{% url 'staff:shift_create' member.pk %}" class="btn btn-primary">
+                <i class="fas fa-clock me-1"></i>Registrar Turno
+            </a>
+            <a href="{% url 'staff:member_update' member.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-edit me-1"></i>Editar
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Info -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center text-white" style="width: 80px; height: 80px;">
+                            <i class="fas fa-user fa-2x"></i>
+                        </div>
+                        <h5 class="mt-2 fw-bold">{{ member.full_name }}</h5>
+                        <span class="badge bg-primary">{{ member.get_role_display }}</span>
+                    </div>
+                    <hr>
+                    {% if member.phone %}<p class="mb-1 small"><i class="fas fa-phone me-2 text-muted"></i>{{ member.phone }}</p>{% endif %}
+                    {% if member.dni %}<p class="mb-1 small"><i class="fas fa-id-card me-2 text-muted"></i>{{ member.dni }}</p>{% endif %}
+                    <p class="mb-1 small"><i class="fas fa-calendar me-2 text-muted"></i>Ingreso: {{ member.hire_date }}</p>
+                    {% if member.payment_type == 'MONTHLY' %}
+                    <p class="mb-1 small"><i class="fas fa-dollar-sign me-2 text-success"></i>Salario: ${{ member.base_salary }}/mes</p>
+                    {% else %}
+                    <p class="mb-1 small"><i class="fas fa-clock me-2 text-info"></i>${{ member.hourly_rate }}/hora</p>
+                    {% endif %}
+                    <p class="mb-0 small text-muted">Horas este mes: {{ monthly_hours }}h</p>
+                </div>
+            </div>
+
+            <!-- Pending Advances -->
+            {% if pending_advances %}
+            <div class="card border-0 shadow-sm border-danger">
+                <div class="card-header bg-danger text-white small">Adelantos Pendientes</div>
+                <div class="card-body p-2">
+                    {% for adv in pending_advances %}
+                    <div class="d-flex justify-content-between small">
+                        <span>{{ adv.date }}</span>
+                        <strong class="text-danger">${{ adv.amount }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Shifts -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Turnos del Mes</span>
+                    <a href="{% url 'staff:shift_create' member.pk %}" class="btn btn-sm btn-outline-light">+ Turno</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Tipo</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for shift in recent_shifts %}
+                                <tr>
+                                    <td>{{ shift.date }}</td>
+                                    <td>{{ shift.start_time|time:"H:i" }}</td>
+                                    <td>{{ shift.end_time|time:"H:i"|default:"-" }}</td>
+                                    <td><strong>{{ shift.hours_worked }}h</strong></td>
+                                    <td><span class="badge bg-secondary">{{ shift.get_shift_type_display }}</span></td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center text-muted">Sin turnos</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlements -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between">
+                    <span>Liquidaciones</span>
+                    <a href="{% url 'staff:generate_settlement' member.pk %}" class="btn btn-sm btn-outline-light">+ Nueva</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for s in settlements %}
+                    <a href="{% url 'staff:settlement_detail' s.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between">
+                            <small>{{ s.period_start }} - {{ s.period_end }}</small>
+                            <strong>${{ s.total_amount }}</strong>
+                        </div>
+                        <span class="badge bg-{% if s.status == 'PAID' %}success{% elif s.status == 'APPROVED' %}primary{% else %}warning text-dark{% endif %}">{{ s.get_status_display }}</span>
+                    </a>
+                    {% empty %}
+                    <div class="list-group-item text-muted text-center small">Sin liquidaciones</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

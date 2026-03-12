@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Personal - BackyardFlow POS{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-9">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Nuevo Personal</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">Cuenta de Usuario</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3"><label class="form-label fw-semibold">Usuario *</label>{{ user_form.username }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Nombre *</label>{{ user_form.first_name }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Apellido *</label>{{ user_form.last_name }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Email</label>{{ user_form.email }}</div>
+                            <div class="col-md-6"><label class="form-label fw-semibold">Contrasena *</label>{{ user_form.password1 }}</div>
+                            <div class="col-md-6"><label class="form-label fw-semibold">Confirmar Contrasena *</label>{{ user_form.password2 }}</div>
+                        </div>
+
+                        <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">Datos del Personal</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3"><label class="form-label fw-semibold">Rol *</label>{{ staff_form.role }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">DNI</label>{{ staff_form.dni }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Telefono</label>{{ staff_form.phone }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Fecha de Nacimiento</label>{{ staff_form.birth_date }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Fecha de Ingreso</label>{{ staff_form.hire_date }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Tipo de Pago</label>{{ staff_form.payment_type }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Salario Base</label>{{ staff_form.base_salary }}</div>
+                            <div class="col-md-3"><label class="form-label fw-semibold">Tarifa por Hora</label>{{ staff_form.hourly_rate }}</div>
+                            <div class="col-12"><label class="form-label fw-semibold">Direccion</label>{{ staff_form.address }}</div>
+                            <div class="col-md-6"><label class="form-label fw-semibold">Contacto de Emergencia</label>{{ staff_form.emergency_contact }}</div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'staff:member_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
