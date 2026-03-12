@@ -109,18 +109,19 @@ if [[ ! -f "$PROJECT_DIR/.env" ]]; then
         apt-get install -y -qq postgresql postgresql-contrib
         "$VENV/bin/pip" install -q psycopg2-binary
 
-        read -rp "  Nombre de la base de datos [backyardflow]: " DB_NAME
-        DB_NAME="${DB_NAME:-backyardflow}"
-        read -rp "  Usuario de la base de datos [backyardflow]: " DB_USER
-        DB_USER="${DB_USER:-backyardflow}"
-        read -rsp "  Contraseña de la base de datos: " DB_PASSWORD; echo
+        DB_NAME="backyarddb"
+        DB_USER="backyarduser"
+        DB_PASSWORD='Backyard$2026'
 
         # Crear usuario y base de datos en PostgreSQL
         info "Configurando PostgreSQL..."
-        sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || true
-        sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" 2>/dev/null || true
-        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>/dev/null || true
-        ok "PostgreSQL configurado"
+        sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';" 2>/dev/null || \
+            warn "El usuario ${DB_USER} ya existe — se continúa"
+        sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" 2>/dev/null || \
+            warn "La base de datos ${DB_NAME} ya existe — se continúa"
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" 2>/dev/null || true
+        sudo -u postgres psql -c "ALTER USER ${DB_USER} CREATEDB;" 2>/dev/null || true
+        ok "PostgreSQL: base de datos '${DB_NAME}', usuario '${DB_USER}'"
 
         DB_ENGINE="django.db.backends.postgresql"
         DB_HOST="localhost"
