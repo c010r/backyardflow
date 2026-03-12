@@ -286,9 +286,15 @@ Group=www-data
 WorkingDirectory=${DEPLOY_DIR}
 EnvironmentFile=${DEPLOY_DIR}/.env
 Environment="DJANGO_SETTINGS_MODULE=backyardflow.settings_prod"
+
+# systemd crea /run/backyardflow/ con permisos correctos automáticamente
+RuntimeDirectory=${SERVICE_NAME}
+RuntimeDirectoryMode=0775
+
 ExecStart=${VENV}/bin/gunicorn \\
     --workers 3 \\
-    --bind unix:/run/${SERVICE_NAME}.sock \\
+    --bind unix:/run/${SERVICE_NAME}/gunicorn.sock \\
+    --umask 007 \\
     --timeout 120 \\
     --access-logfile ${DEPLOY_DIR}/logs/access.log \\
     --error-logfile ${DEPLOY_DIR}/logs/error.log \\
@@ -302,15 +308,29 @@ KillMode=mixed
 WantedBy=multi-user.target
 EOF
 
+# Asegurar que nginx (www-data) puede leer el socket
+usermod -aG www-data www-data 2>/dev/null || true
+
 systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}"
 systemctl restart "${SERVICE_NAME}"
 
-sleep 2
-if systemctl is-active --quiet "${SERVICE_NAME}"; then
-    ok "Servicio $SERVICE_NAME activo"
+# Esperar hasta 10s a que el socket aparezca
+SOCKET_PATH="/run/${SERVICE_NAME}/gunicorn.sock"
+for i in {1..10}; do
+    sleep 1
+    if [[ -S "$SOCKET_PATH" ]]; then break; fi
+done
+
+if systemctl is-active --quiet "${SERVICE_NAME}" && [[ -S "$SOCKET_PATH" ]]; then
+    ok "Servicio $SERVICE_NAME activo — socket: $SOCKET_PATH"
 else
-    err "El servicio no arrancó. Ver: journalctl -u ${SERVICE_NAME} -n 30"
+    echo
+    warn "El servicio no arrancó correctamente. Diagnóstico:"
+    systemctl status "${SERVICE_NAME}" --no-pager -l || true
+    echo
+    journalctl -u "${SERVICE_NAME}" -n 20 --no-pager || true
+    err "Corregir errores arriba y volver a ejecutar deploy.sh"
 fi
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -345,7 +365,7 @@ server {
 
     # Todo lo demás → Gunicorn → Django
     location / {
-        proxy_pass          http://unix:/run/${SERVICE_NAME}.sock;
+        proxy_pass          http://unix:/run/${SERVICE_NAME}/gunicorn.sock;
         proxy_set_header    Host \$host;
         proxy_set_header    X-Real-IP \$remote_addr;
         proxy_set_header    X-Forwarded-For \$proxy_add_x_forwarded_for;
