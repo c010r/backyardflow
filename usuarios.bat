@@ -23,5 +23,6 @@ for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
     )
 )
 
+set DJANGO_SETTINGS_MODULE=backyardflow.settings_prod
 python manage.py gestionar_usuarios
 pause
