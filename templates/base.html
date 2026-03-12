@@ -124,26 +124,26 @@
                     </button>
                 </li>
                 {% if user.is_authenticated %}
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle me-1"></i>{{ user.get_full_name|default:user.username }}
+                <li class="nav-item">
+                    <span class="navbar-text text-light me-2 d-none d-md-inline">
+                        <i class="fas fa-user-circle me-1 text-warning"></i>{{ user.get_full_name|default:user.username }}
+                        {% if user_role %}<span class="badge bg-secondary ms-1" style="font-size:.65rem;">{{ user_role }}</span>{% endif %}
+                    </span>
+                </li>
+                {% if user.is_staff %}
+                <li class="nav-item me-1">
+                    <a href="{% url 'config:dashboard' %}" class="btn btn-sm btn-outline-light" title="Administración">
+                        <i class="fas fa-cog"></i>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        {% if user.is_staff %}
-                        <li><a class="dropdown-item" href="{% url 'config:dashboard' %}">
-                            <i class="fas fa-cog me-2 text-muted"></i>Administración
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        {% endif %}
-                        <li>
-                            <form method="post" action="{% url 'logout' %}">
-                                {% csrf_token %}
-                                <button type="submit" class="dropdown-item text-danger">
-                                    <i class="fas fa-sign-out-alt me-1"></i>Salir
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger" title="Cerrar sesión">
+                            <i class="fas fa-sign-out-alt me-1"></i>Salir
+                        </button>
+                    </form>
                 </li>
                 {% endif %}
             </ul>
