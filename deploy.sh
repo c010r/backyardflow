@@ -346,10 +346,18 @@ fi
 sep
 info "Configurando nginx para servir desde $DEPLOY_DIR ..."
 
+# server_name: incluir www. solo si es dominio raíz
+_DOT_COUNT=$(echo "$DOMAIN" | tr -cd '.' | wc -c)
+if [[ "$_DOT_COUNT" -ge 2 ]]; then
+    NGINX_SERVER_NAME="$DOMAIN"
+else
+    NGINX_SERVER_NAME="$DOMAIN www.$DOMAIN"
+fi
+
 cat > "/etc/nginx/sites-available/${SERVICE_NAME}" <<EOF
 server {
     listen 80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${NGINX_SERVER_NAME};
 
     client_max_body_size 20M;
 
@@ -410,8 +418,22 @@ if [[ "$DOMAIN" != "localhost" && "$DOMAIN" != "127.0.0.1" ]] && \
     read -rp "  ¿Instalar certificado SSL gratuito (Let's Encrypt)? (s/n) [n]: " INSTALL_SSL
     if [[ "${INSTALL_SSL,,}" == "s" ]]; then
         apt-get install -y -qq certbot python3-certbot-nginx
+
+        # Contar puntos: si el dominio tiene 2+ puntos es un subdominio (ej: app.foo.com)
+        # En ese caso NO agregar www. porque no existe en DNS
+        DOT_COUNT=$(echo "$DOMAIN" | tr -cd '.' | wc -c)
+        if [[ "$DOT_COUNT" -ge 2 ]]; then
+            # Subdominio: solo pedir certificado para el dominio exacto
+            CERTBOT_DOMAINS="-d $DOMAIN"
+            info "Subdominio detectado — SSL solo para: $DOMAIN"
+        else
+            # Dominio raíz (ej: milocal.com): incluir www.
+            CERTBOT_DOMAINS="-d $DOMAIN -d www.$DOMAIN"
+            info "Dominio raíz — SSL para: $DOMAIN y www.$DOMAIN"
+        fi
+
         certbot --nginx \
-            -d "$DOMAIN" -d "www.$DOMAIN" \
+            $CERTBOT_DOMAINS \
             --non-interactive --agree-tos \
             -m "$ADMIN_EMAIL" \
             --redirect && ok "SSL instalado — HTTPS activo" \
