@@ -28,5 +28,5 @@ else
     exit 1
 fi
 
-export DJANGO_SETTINGS_MODULE=backyardflow.settings_prod
+export DJANGO_SETTINGS_MODULE=settings_prod
 python manage.py gestionar_usuarios
