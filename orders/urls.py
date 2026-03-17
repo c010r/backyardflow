@@ -17,4 +17,12 @@ urlpatterns = [
     path('kitchen/', views.kitchen_display, name='kitchen_display'),
     path('virtual/<uuid:token>/', views.virtual_waiter_menu, name='virtual_waiter_menu'),
     path('virtual/<uuid:token>/order/', views.virtual_waiter_order, name='virtual_waiter_order'),
+    # Bar event POS
+    path('bar/', views.bar_event_pos, name='bar_event'),
+    path('bar/new-tab/', views.bar_event_new_tab, name='bar_new_tab'),
+    path('bar/stats/', views.bar_event_stats, name='bar_stats'),
+    path('bar/<int:order_pk>/add/', views.bar_event_add_item, name='bar_add_item'),
+    path('bar/<int:order_pk>/remove/<int:item_pk>/', views.bar_event_remove_item, name='bar_remove_item'),
+    path('bar/<int:order_pk>/checkout/', views.bar_event_checkout, name='bar_checkout'),
+    path('bar/<int:order_pk>/detail/', views.bar_event_tab_detail, name='bar_tab_detail'),
 ]

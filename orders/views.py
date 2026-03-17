@@ -8,6 +8,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Sum, Count
+from decimal import Decimal
 import json
 from .models import Order, OrderItem, VirtualWaiterSession
 from .forms import OrderForm, OrderItemForm
@@ -354,3 +356,190 @@ def virtual_waiter_order(request, token):
             return JsonResponse({'success': True, 'order_number': order.order_number})
 
     return redirect('orders:virtual_waiter_menu', token=token)
+
+
+# ─────────────────────────────────────────────
+#  BAR EVENT POS
+# ─────────────────────────────────────────────
+
+@role_required('orders')
+def bar_event_pos(request):
+    categories = MenuCategory.objects.filter(active=True).order_by('order')
+    menu_items = (MenuItem.objects
+                  .filter(available=True)
+                  .select_related('category')
+                  .order_by('category__order', 'name'))
+    open_tabs = (Order.objects
+                 .filter(
+                     status__in=['PENDING', 'IN_PROGRESS', 'READY', 'DELIVERED'],
+                     table__isnull=True,
+                     created_at__date=timezone.now().date(),
+                 )
+                 .prefetch_related('items__menu_item')
+                 .order_by('created_at'))
+    context = {
+        'categories': categories,
+        'menu_items': menu_items,
+        'open_tabs': open_tabs,
+    }
+    return render(request, 'orders/bar_event.html', context)
+
+
+@role_required('orders')
+def bar_event_new_tab(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False}, status=405)
+    label = request.POST.get('label', '').strip() or f"Tab {timezone.now().strftime('%H:%M:%S')}"
+    order = Order.objects.create(
+        order_type='TAKEOUT',
+        waiter=request.user,
+        status='PENDING',
+        notes=label,
+    )
+    return JsonResponse({
+        'success': True,
+        'tab_id': order.pk,
+        'tab_number': order.order_number,
+        'label': label,
+    })
+
+
+@role_required('orders')
+def bar_event_add_item(request, order_pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False}, status=405)
+    order = get_object_or_404(Order, pk=order_pk)
+    if order.status in ('PAID', 'CANCELLED'):
+        return JsonResponse({'success': False, 'error': 'Tab cerrado'}, status=400)
+    menu_item_id = request.POST.get('menu_item_id')
+    quantity = int(request.POST.get('quantity', 1))
+    menu_item = get_object_or_404(MenuItem, pk=menu_item_id)
+    existing = order.items.filter(menu_item=menu_item, status='PENDING').first()
+    if existing:
+        existing.quantity += quantity
+        existing.save()
+        item = existing
+    else:
+        item = OrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            quantity=quantity,
+            unit_price=menu_item.price,
+            sent_to_kitchen_at=timezone.now(),
+        )
+    if order.status == 'PENDING':
+        order.status = 'IN_PROGRESS'
+        order.save()
+    cart_items = _order_cart(order)
+    return JsonResponse({'success': True, 'cart': cart_items, 'order_total': str(order.total)})
+
+
+@role_required('orders')
+def bar_event_remove_item(request, order_pk, item_pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False}, status=405)
+    order = get_object_or_404(Order, pk=order_pk)
+    item = get_object_or_404(OrderItem, pk=item_pk, order=order)
+    item.status = 'CANCELLED'
+    item.save()
+    cart_items = _order_cart(order)
+    return JsonResponse({'success': True, 'cart': cart_items, 'order_total': str(order.total)})
+
+
+@role_required('orders')
+def bar_event_checkout(request, order_pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False}, status=405)
+    order = get_object_or_404(Order, pk=order_pk)
+    if order.status == 'PAID':
+        return JsonResponse({'success': False, 'error': 'Ya cobrado'}, status=400)
+    payment_method = request.POST.get('payment_method', 'CASH')
+    amount_received = request.POST.get('amount_received')
+    discount = Decimal(request.POST.get('discount', '0'))
+    if discount > 0:
+        order.discount_percent = min(discount, Decimal('100'))
+        order.save()
+    total = order.total
+    change = Decimal('0')
+    if payment_method == 'CASH' and amount_received:
+        received = Decimal(amount_received)
+        change = max(received - total, Decimal('0'))
+    try:
+        from cash_register.models import CashSession, CashMovement, Payment
+        active_session = (CashSession.objects.filter(status='OPEN', operator=request.user).first()
+                          or CashSession.objects.filter(status='OPEN').first())
+        if active_session:
+            Payment.objects.create(
+                order=order,
+                session=active_session,
+                payment_method=payment_method,
+                amount=total,
+                amount_received=Decimal(amount_received) if amount_received else total,
+                change_given=change,
+                created_by=request.user,
+            )
+            CashMovement.objects.create(
+                session=active_session,
+                movement_type='SALE',
+                amount=total,
+                description=f'Venta barra {order.order_number}',
+                reference=order.order_number,
+                created_by=request.user,
+            )
+            order.cash_session = active_session
+    except Exception:
+        pass
+    order.status = 'PAID'
+    order.closed_at = timezone.now()
+    order.save()
+    return JsonResponse({'success': True, 'order_number': order.order_number, 'total': str(total), 'change': str(change)})
+
+
+@role_required('orders')
+def bar_event_tab_detail(request, order_pk):
+    order = get_object_or_404(Order, pk=order_pk)
+    return JsonResponse({
+        'success': True,
+        'tab_id': order.pk,
+        'tab_number': order.order_number,
+        'label': order.notes or order.order_number,
+        'cart': _order_cart(order),
+        'order_total': str(order.total),
+        'status': order.status,
+    })
+
+
+@role_required('orders')
+def bar_event_stats(request):
+    today = timezone.now().date()
+    paid = Order.objects.filter(status='PAID', closed_at__date=today)
+    total_sales = (paid.aggregate(t=Sum('items__unit_price'))['t'] or Decimal('0'))
+    top_items = (OrderItem.objects
+                 .filter(order__status='PAID', order__closed_at__date=today, status='PENDING')
+                 .values('menu_item__name')
+                 .annotate(total_qty=Sum('quantity'))
+                 .order_by('-total_qty')[:5])
+    open_count = Order.objects.filter(
+        status__in=['PENDING', 'IN_PROGRESS'],
+        table__isnull=True,
+        created_at__date=today,
+    ).count()
+    return JsonResponse({
+        'total_sales': str(total_sales),
+        'paid_orders': paid.count(),
+        'open_tabs': open_count,
+        'top_items': list(top_items),
+    })
+
+
+def _order_cart(order):
+    return [
+        {
+            'id': i.pk,
+            'name': i.menu_item.name,
+            'qty': i.quantity,
+            'unit_price': str(i.unit_price),
+            'subtotal': str(i.subtotal),
+        }
+        for i in order.items.filter(status='PENDING').select_related('menu_item')
+    ]

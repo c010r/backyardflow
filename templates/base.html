@@ -37,10 +37,19 @@
                 </li>
                 {% endif %}
                 {% if can_orders %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'orders:dashboard' %}">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-receipt me-1"></i>Comandas
                     </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'orders:dashboard' %}">Dashboard</a></li>
+                        <li><a class="dropdown-item" href="{% url 'orders:order_list' %}">Historial</a></li>
+                        <li><a class="dropdown-item" href="{% url 'orders:order_create' %}">Nueva Comanda</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'orders:bar_event' %}">
+                            <i class="fas fa-cocktail me-1 text-warning"></i>POS Barra Evento
+                        </a></li>
+                    </ul>
                 </li>
                 {% endif %}
                 {% if can_kitchen %}

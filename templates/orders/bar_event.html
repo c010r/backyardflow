@@ -1,0 +1,632 @@
+{% extends 'base.html' %}
+{% block title %}POS Barra — BackyardFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Layout ─────────────────────────────── */
+#bar-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr;
+  height: calc(100vh - 62px);
+  gap: 0;
+  overflow: hidden;
+}
+#bar-left  { display:flex; flex-direction:column; overflow:hidden; }
+#bar-right { display:flex; flex-direction:column; border-left: 1px solid rgba(0,0,0,.1); overflow:hidden; }
+
+/* ── Stats bar ───────────────────────────── */
+#stats-bar {
+  background: #212529; color: #fff;
+  display: flex; align-items: center; gap: 24px;
+  padding: 8px 16px; font-size: .8rem;
+}
+#stats-bar .stat-item strong { font-size: 1.1rem; }
+.live-dot { width:8px;height:8px;border-radius:50%;background:#28a745;display:inline-block;animation:pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Tabs row ────────────────────────────── */
+#tabs-row {
+  display: flex; gap: 6px; padding: 8px 12px;
+  overflow-x: auto; flex-shrink: 0;
+  background: var(--bs-body-bg);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.tab-btn {
+  border-radius: 20px; padding: 5px 14px; font-size: .78rem; font-weight: 600;
+  border: 2px solid #dee2e6; background: var(--bs-body-bg); cursor: pointer;
+  white-space: nowrap; transition: all .12s; position: relative;
+}
+.tab-btn.active { background: #0d6efd; color: #fff; border-color: #0d6efd; }
+.tab-btn .tab-total { font-size: .68rem; opacity: .75; }
+.tab-btn .tab-close {
+  margin-left: 6px; opacity: .5; font-size: .75rem;
+  background:none; border:none; padding:0; cursor:pointer; color:inherit;
+}
+.tab-btn .tab-close:hover { opacity:1; }
+#btn-new-tab {
+  border-radius: 20px; padding: 5px 14px; font-size: .78rem;
+  border: 2px dashed #0d6efd; color: #0d6efd; background: transparent; cursor: pointer;
+  white-space: nowrap; font-weight: 600;
+}
+#btn-new-tab:hover { background: #0d6efd; color: #fff; }
+
+/* ── Category tabs ───────────────────────── */
+#cat-bar {
+  display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto; flex-shrink: 0;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.cat-chip {
+  border-radius: 16px; padding: 4px 14px; font-size: .78rem; font-weight: 600;
+  border: 1px solid #dee2e6; background: var(--bs-body-bg); cursor: pointer; white-space: nowrap;
+}
+.cat-chip.active { background: #212529; color: #fff; border-color: #212529; }
+
+/* ── Product grid ────────────────────────── */
+#product-grid {
+  flex: 1; overflow-y: auto; padding: 10px 12px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;
+  align-content: start;
+}
+.prod-btn {
+  border-radius: 12px; border: 1px solid rgba(0,0,0,.1);
+  background: var(--bs-body-bg); padding: 10px 8px;
+  cursor: pointer; text-align: center; transition: all .1s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.prod-btn:hover, .prod-btn:active { background: #0d6efd; color: #fff; border-color: #0d6efd; transform: scale(.97); }
+.prod-btn .prod-name { font-size: .8rem; font-weight: 700; line-height: 1.2; }
+.prod-btn .prod-price { font-size: .9rem; font-weight: 800; }
+.prod-btn .prod-icon { font-size: 1.4rem; }
+
+/* ── Cart (right panel) ──────────────────── */
+#cart-header {
+  padding: 10px 14px; font-weight: 700; font-size: .95rem;
+  border-bottom: 1px solid rgba(0,0,0,.08); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#cart-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--bs-secondary); flex-direction: column; gap: 8px;
+}
+#cart-items { flex: 1; overflow-y: auto; padding: 8px; }
+.cart-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 10px; margin-bottom: 5px;
+  background: var(--bs-body-bg); border: 1px solid rgba(0,0,0,.07);
+}
+.cart-item .ci-name  { flex: 1; font-size: .82rem; font-weight: 600; }
+.cart-item .ci-qty   { font-size: .75rem; color: var(--bs-secondary); }
+.cart-item .ci-price { font-size: .82rem; font-weight: 700; }
+.ci-del { background:none; border:none; color:#dc3545; cursor:pointer; font-size:.75rem; padding:2px 4px; border-radius:6px; }
+.ci-del:hover { background:#dc3545; color:#fff; }
+
+#cart-footer {
+  padding: 10px 14px; border-top: 1px solid rgba(0,0,0,.1); flex-shrink: 0;
+}
+#cart-total { font-size: 1.6rem; font-weight: 800; }
+#btn-checkout {
+  width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;
+  border-radius: 12px; border: none; background: #28a745; color: #fff; cursor: pointer;
+  transition: background .12s;
+}
+#btn-checkout:hover { background: #218838; }
+#btn-checkout:disabled { background: #6c757d; cursor: default; }
+
+/* ── Payment modal ───────────────────────── */
+.pay-method-btn {
+  flex: 1; padding: 14px; border-radius: 12px; font-size: .9rem; font-weight: 700;
+  border: 2px solid #dee2e6; background: var(--bs-body-bg); cursor: pointer; text-align:center;
+}
+.pay-method-btn.selected { border-color: #0d6efd; background: #0d6efd; color: #fff; }
+#change-display {
+  font-size: 2rem; font-weight: 800; color: #28a745; text-align: center;
+}
+.quick-cash { border-radius: 8px; padding: 6px 12px; font-size: .82rem; border: 1px solid #dee2e6;
+  background: var(--bs-body-bg); cursor:pointer; }
+.quick-cash:hover { background: #f8f9fa; }
+
+/* ── No tab selected ─────────────────────── */
+#no-tab-msg {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  color:var(--bs-secondary); flex-direction:column; gap:12px; font-size:.9rem;
+}
+
+/* responsive: en pantallas chicas, stack */
+@media(max-width:768px){
+  #bar-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: auto; }
+  #bar-right { border-left:none; border-top:1px solid rgba(0,0,0,.1); max-height:50vh; }
+  #product-grid { grid-template-columns: repeat(auto-fill, minmax(90px,1fr)); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="bar-layout">
+
+  <!-- ── IZQUIERDA: productos ─────────────── -->
+  <div id="bar-left">
+
+    <!-- Stats bar -->
+    <div id="stats-bar">
+      <span class="live-dot me-1"></span>
+      <span class="stat-item"><strong id="s-sales">$0</strong><br>Vendido hoy</span>
+      <span class="stat-item"><strong id="s-paid">0</strong><br>Cobradas</span>
+      <span class="stat-item"><strong id="s-open">0</strong><br>Tabs abiertos</span>
+      <span class="ms-auto text-muted small" id="s-time"></span>
+    </div>
+
+    <!-- Tabs de comandas abiertas -->
+    <div id="tabs-row">
+      <button id="btn-new-tab" onclick="newTab()">
+        <i class="fas fa-plus me-1"></i>Nuevo Tab
+      </button>
+      {% for tab in open_tabs %}
+      <button class="tab-btn" id="tab-btn-{{ tab.pk }}" onclick="loadTab({{ tab.pk }})">
+        <span>{{ tab.notes|default:tab.order_number }}</span>
+        <span class="tab-total d-block">${{ tab.total|floatformat:0 }}</span>
+        <button class="tab-close" onclick="closeTab(event, {{ tab.pk }})" title="Cobrar y cerrar">✕</button>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Categorías -->
+    <div id="cat-bar">
+      <button class="cat-chip active" onclick="filterCat(null, this)">Todos</button>
+      {% for cat in categories %}
+      <button class="cat-chip" onclick="filterCat({{ cat.pk }}, this)">{{ cat.name }}</button>
+      {% endfor %}
+    </div>
+
+    <!-- Grid de productos -->
+    <div id="product-grid">
+      {% for item in menu_items %}
+      <button class="prod-btn" data-cat="{{ item.category.pk|default:'' }}"
+              onclick="addToCart({{ item.pk }})">
+        <span class="prod-icon">
+          {% if item.category.name|lower == 'bebidas' or item.category.name|lower == 'tragos' %}🍹
+          {% elif item.category.name|lower == 'cervezas' %}🍺
+          {% elif item.category.name|lower == 'vinos' %}🍷
+          {% elif item.category.name|lower == 'comidas' or item.category.name|lower == 'food' %}🍔
+          {% elif item.category.name|lower == 'postres' %}🍰
+          {% else %}🛒{% endif %}
+        </span>
+        <span class="prod-name">{{ item.name }}</span>
+        <span class="prod-price">${{ item.price|floatformat:0 }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- ── DERECHA: carrito ─────────────────── -->
+  <div id="bar-right">
+    <div id="cart-header">
+      <span id="cart-tab-label"><i class="fas fa-shopping-cart me-2 text-primary"></i>Carrito</span>
+      <button class="btn btn-sm btn-outline-danger d-none" id="btn-clear-cart" onclick="clearCart()" title="Vaciar carrito">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+
+    <!-- Sin tab seleccionado -->
+    <div id="no-tab-msg">
+      <i class="fas fa-hand-pointer fa-2x opacity-25"></i>
+      Abrí un tab o seleccioná uno existente
+    </div>
+
+    <!-- Items del carrito -->
+    <div id="cart-items" style="display:none"></div>
+
+    <!-- Carrito vacío -->
+    <div id="cart-empty" style="display:none">
+      <i class="fas fa-inbox fa-2x opacity-25"></i>
+      <span>Tab vacío — tocá un producto</span>
+    </div>
+
+    <!-- Footer cobro -->
+    <div id="cart-footer" style="display:none">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted fw-semibold">TOTAL</span>
+        <span id="cart-total">$0</span>
+      </div>
+      <!-- Descuento rápido -->
+      <div class="d-flex gap-2 mb-2 align-items-center">
+        <span class="small text-muted">Dto%</span>
+        <input type="number" id="discount-input" class="form-control form-control-sm" style="width:70px" min="0" max="100" value="0" onchange="applyDiscount()">
+        <span id="discount-label" class="small text-danger"></span>
+      </div>
+      <button id="btn-checkout" onclick="openPayModal()" disabled>
+        <i class="fas fa-dollar-sign me-2"></i>Cobrar
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Modal de pago ──────────────────────── -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="fas fa-dollar-sign me-2"></i>Cobrar</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Total a cobrar -->
+        <div class="text-center mb-3">
+          <div class="text-muted small">TOTAL</div>
+          <div id="pay-total" class="display-5 fw-bold text-success">$0</div>
+        </div>
+
+        <!-- Método de pago -->
+        <div class="d-flex gap-2 mb-3">
+          <button class="pay-method-btn selected" id="btn-cash" onclick="selectMethod('CASH')">
+            <i class="fas fa-money-bill-wave d-block mb-1"></i>Efectivo
+          </button>
+          <button class="pay-method-btn" id="btn-card" onclick="selectMethod('CARD')">
+            <i class="fas fa-credit-card d-block mb-1"></i>Tarjeta
+          </button>
+          <button class="pay-method-btn" id="btn-transfer" onclick="selectMethod('TRANSFER')">
+            <i class="fas fa-exchange-alt d-block mb-1"></i>Transferencia
+          </button>
+        </div>
+
+        <!-- Efectivo recibido -->
+        <div id="cash-section">
+          <label class="form-label fw-semibold">Recibido</label>
+          <input type="number" id="amount-received" class="form-control form-control-lg text-center fw-bold"
+                 placeholder="0.00" oninput="calcChange()" step="0.01">
+          <!-- Atajos de billetes -->
+          <div class="d-flex flex-wrap gap-1 mt-2" id="quick-cash-btns"></div>
+          <!-- Vuelto -->
+          <div class="mt-3 text-center" id="change-section" style="display:none!important">
+            <div class="text-muted small">VUELTO</div>
+            <div id="change-display">$0</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success fw-bold px-4" onclick="confirmPayment()">
+          <i class="fas fa-check me-1"></i>Confirmar cobro
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal nuevo tab ────────────────────── -->
+<div class="modal fade" id="newTabModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h6 class="modal-title">Nuevo Tab</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label small fw-semibold">Nombre del cliente / tab</label>
+        <input type="text" id="tab-label-input" class="form-control" placeholder="Ej: Juan, Mesa 3, VIP…">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="confirmNewTab()">
+          <i class="fas fa-plus me-1"></i>Crear tab
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast notificaciones ───────────────── -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:2000">
+  <div id="toast-msg" class="toast align-items-center text-white border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-semibold" id="toast-text"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+let activeTabId = null;
+let activeTotal = 0;
+let payMethod = 'CASH';
+
+// ── Estado de los tabs en memoria ──────────
+const tabsState = {};
+{% for tab in open_tabs %}
+tabsState[{{ tab.pk }}] = {
+  label: "{{ tab.notes|default:tab.order_number|escapejs }}",
+  total: {{ tab.total }},
+};
+{% endfor %}
+
+// ── Utilidades ─────────────────────────────
+function csrfPost(url, data) {
+  const body = new URLSearchParams(data);
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  }).then(r => r.json());
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast-msg');
+  el.className = `toast align-items-center text-white border-0 bg-${type}`;
+  document.getElementById('toast-text').textContent = msg;
+  new bootstrap.Toast(el, { delay: 2500 }).show();
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('s-time').textContent =
+    now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Stats ──────────────────────────────────
+function loadStats() {
+  fetch('{% url "orders:bar_stats" %}')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('s-sales').textContent = '$' + parseFloat(d.total_sales).toLocaleString('es-AR', {minimumFractionDigits:0});
+      document.getElementById('s-paid').textContent  = d.paid_orders;
+      document.getElementById('s-open').textContent  = d.open_tabs;
+    });
+}
+
+// ── Tabs ───────────────────────────────────
+function newTab() {
+  document.getElementById('tab-label-input').value = '';
+  new bootstrap.Modal(document.getElementById('newTabModal')).show();
+  setTimeout(() => document.getElementById('tab-label-input').focus(), 400);
+}
+
+function confirmNewTab() {
+  const label = document.getElementById('tab-label-input').value.trim() || 'Tab';
+  bootstrap.Modal.getInstance(document.getElementById('newTabModal')).hide();
+  csrfPost('{% url "orders:bar_new_tab" %}', { label })
+    .then(d => {
+      if (!d.success) return showToast('Error al crear tab', 'danger');
+      // Agrega botón al tab row
+      tabsState[d.tab_id] = { label: d.label, total: 0 };
+      const row = document.getElementById('tabs-row');
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.id = 'tab-btn-' + d.tab_id;
+      btn.innerHTML = `<span>${d.label}</span><span class="tab-total d-block">$0</span><button class="tab-close" onclick="closeTab(event, ${d.tab_id})" title="Cerrar">✕</button>`;
+      btn.onclick = () => loadTab(d.tab_id);
+      row.appendChild(btn);
+      loadTab(d.tab_id);
+      showToast('Tab "' + d.label + '" creado');
+    });
+}
+
+function loadTab(tabId) {
+  activeTabId = tabId;
+  // Resaltar botón activo
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const tabBtn = document.getElementById('tab-btn-' + tabId);
+  if (tabBtn) tabBtn.classList.add('active');
+
+  fetch(`/orders/bar/${tabId}/detail/`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('cart-tab-label').innerHTML =
+        `<i class="fas fa-user me-2 text-primary"></i>${d.label}`;
+      document.getElementById('no-tab-msg').style.display = 'none';
+      renderCart(d.cart, parseFloat(d.order_total));
+    });
+}
+
+function closeTab(event, tabId) {
+  event.stopPropagation();
+  // Si tiene items, ir directo al cobro
+  if (activeTabId === tabId) {
+    openPayModal();
+  } else {
+    loadTab(tabId);
+    setTimeout(openPayModal, 400);
+  }
+}
+
+function removeTabBtn(tabId) {
+  const btn = document.getElementById('tab-btn-' + tabId);
+  if (btn) btn.remove();
+  delete tabsState[tabId];
+  if (activeTabId === tabId) {
+    activeTabId = null;
+    document.getElementById('no-tab-msg').style.display = '';
+    document.getElementById('cart-items').style.display = 'none';
+    document.getElementById('cart-empty').style.display = 'none';
+    document.getElementById('cart-footer').style.display = 'none';
+    document.getElementById('btn-clear-cart').classList.add('d-none');
+    document.getElementById('cart-tab-label').innerHTML = '<i class="fas fa-shopping-cart me-2 text-primary"></i>Carrito';
+  }
+}
+
+// ── Categorías ─────────────────────────────
+function filterCat(catId, btn) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.prod-btn').forEach(b => {
+    b.style.display = (!catId || b.dataset.cat == catId) ? '' : 'none';
+  });
+}
+
+// ── Agregar al carrito ──────────────────────
+function addToCart(menuItemId) {
+  if (!activeTabId) {
+    showToast('Primero abrí o seleccioná un tab', 'warning');
+    return;
+  }
+  csrfPost(`/orders/bar/${activeTabId}/add/`, { menu_item_id: menuItemId, quantity: 1 })
+    .then(d => {
+      if (!d.success) return showToast(d.error || 'Error', 'danger');
+      renderCart(d.cart, parseFloat(d.order_total));
+      // Animar botón tab
+      const tBtn = document.getElementById('tab-btn-' + activeTabId);
+      if (tBtn) tBtn.querySelector('.tab-total').textContent = '$' + parseFloat(d.order_total).toLocaleString('es-AR');
+    });
+}
+
+// ── Render carrito ─────────────────────────
+function renderCart(items, total) {
+  activeTotal = total;
+  const container = document.getElementById('cart-items');
+  const empty     = document.getElementById('cart-empty');
+  const footer    = document.getElementById('cart-footer');
+  const clearBtn  = document.getElementById('btn-clear-cart');
+  const checkout  = document.getElementById('btn-checkout');
+
+  if (!items || items.length === 0) {
+    container.style.display = 'none';
+    empty.style.display = 'flex';
+    footer.style.display = 'none';
+    clearBtn.classList.add('d-none');
+    checkout.disabled = true;
+    return;
+  }
+
+  container.style.display = 'block';
+  empty.style.display = 'none';
+  footer.style.display = 'block';
+  clearBtn.classList.remove('d-none');
+  checkout.disabled = false;
+
+  // Render items agrupando por nombre
+  container.innerHTML = items.map(i => `
+    <div class="cart-item" id="ci-${i.id}">
+      <span class="ci-name">${i.name}</span>
+      <span class="ci-qty">×${i.qty}</span>
+      <span class="ci-price">$${parseFloat(i.subtotal).toLocaleString('es-AR')}</span>
+      <button class="ci-del" onclick="removeFromCart(${i.id})" title="Quitar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `).join('');
+
+  // Actualizar total con descuento
+  applyDiscount();
+}
+
+function applyDiscount() {
+  const disc = parseFloat(document.getElementById('discount-input').value) || 0;
+  const discounted = activeTotal * (1 - disc / 100);
+  document.getElementById('cart-total').textContent =
+    '$' + discounted.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+  document.getElementById('discount-label').textContent =
+    disc > 0 ? `−$${(activeTotal - discounted).toLocaleString('es-AR', {minimumFractionDigits:2})}` : '';
+}
+
+function removeFromCart(itemId) {
+  if (!activeTabId) return;
+  csrfPost(`/orders/bar/${activeTabId}/remove/${itemId}/`, {})
+    .then(d => {
+      if (d.success) {
+        renderCart(d.cart, parseFloat(d.order_total));
+        const tBtn = document.getElementById('tab-btn-' + activeTabId);
+        if (tBtn) tBtn.querySelector('.tab-total').textContent = '$' + parseFloat(d.order_total).toLocaleString('es-AR');
+      }
+    });
+}
+
+function clearCart() {
+  // No hay endpoint de clear-all; iteramos los items del DOM
+  const items = document.querySelectorAll('.cart-item');
+  if (!items.length) return;
+  // Extrae los IDs de los botones de borrado
+  items.forEach(el => {
+    const btn = el.querySelector('.ci-del');
+    if (btn) btn.click();
+  });
+}
+
+// ── Pago ────────────────────────────────────
+function openPayModal() {
+  if (!activeTabId) return;
+  const disc = parseFloat(document.getElementById('discount-input').value) || 0;
+  const total = activeTotal * (1 - disc / 100);
+  document.getElementById('pay-total').textContent =
+    '$' + total.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+  document.getElementById('amount-received').value = '';
+  document.getElementById('change-section').style.display = 'none';
+  selectMethod('CASH');
+  buildQuickCash(total);
+  new bootstrap.Modal(document.getElementById('payModal')).show();
+  setTimeout(() => document.getElementById('amount-received').focus(), 400);
+}
+
+function selectMethod(method) {
+  payMethod = method;
+  ['CASH','CARD','TRANSFER'].forEach(m => {
+    document.getElementById('btn-' + m.toLowerCase()).classList.toggle('selected', m === method);
+  });
+  document.getElementById('cash-section').style.display = method === 'CASH' ? 'block' : 'none';
+}
+
+function buildQuickCash(total) {
+  const bills = [100, 200, 500, 1000, 2000, 5000];
+  const relevant = bills.filter(b => b >= total);
+  // Siempre muestra hasta 4 opciones
+  const show = [...new Set([Math.ceil(total/100)*100, ...relevant])].slice(0,4);
+  const container = document.getElementById('quick-cash-btns');
+  container.innerHTML = show.map(b =>
+    `<button class="quick-cash" onclick="setReceived(${b})">$${b.toLocaleString('es-AR')}</button>`
+  ).join('');
+}
+
+function setReceived(amount) {
+  document.getElementById('amount-received').value = amount;
+  calcChange();
+}
+
+function calcChange() {
+  const disc = parseFloat(document.getElementById('discount-input').value) || 0;
+  const total = activeTotal * (1 - disc / 100);
+  const received = parseFloat(document.getElementById('amount-received').value) || 0;
+  if (received >= total) {
+    const change = received - total;
+    document.getElementById('change-display').textContent =
+      '$' + change.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+    document.getElementById('change-section').style.removeProperty('display');
+  } else {
+    document.getElementById('change-section').style.display = 'none';
+  }
+}
+
+function confirmPayment() {
+  if (!activeTabId) return;
+  const disc      = parseFloat(document.getElementById('discount-input').value) || 0;
+  const received  = document.getElementById('amount-received').value;
+
+  csrfPost(`/orders/bar/${activeTabId}/checkout/`, {
+    payment_method: payMethod,
+    amount_received: received || activeTotal,
+    discount: disc,
+  })
+  .then(d => {
+    if (!d.success) return showToast(d.error || 'Error al cobrar', 'danger');
+    bootstrap.Modal.getInstance(document.getElementById('payModal')).hide();
+    const change = parseFloat(d.change);
+    const msg = change > 0
+      ? `✓ Cobrado ${d.order_number} — Vuelto: $${change.toLocaleString('es-AR', {minimumFractionDigits:2})}`
+      : `✓ Cobrado ${d.order_number}`;
+    showToast(msg, 'success');
+    removeTabBtn(activeTabId);
+    document.getElementById('discount-input').value = 0;
+    loadStats();
+  });
+}
+
+// ── Init ────────────────────────────────────
+updateClock();
+setInterval(updateClock, 30000);
+loadStats();
+setInterval(loadStats, 60000);
+</script>
+{% endblock %}
