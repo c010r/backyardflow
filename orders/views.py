@@ -364,11 +364,11 @@ def virtual_waiter_order(request, token):
 
 @role_required('orders')
 def bar_event_pos(request):
-    categories = MenuCategory.objects.filter(active=True).order_by('order')
+    categories = MenuCategory.objects.filter(active=True).order_by('display_order')
     menu_items = (MenuItem.objects
                   .filter(available=True)
                   .select_related('category')
-                  .order_by('category__order', 'name'))
+                  .order_by('category__display_order', 'name'))
     open_tabs = (Order.objects
                  .filter(
                      status__in=['PENDING', 'IN_PROGRESS', 'READY', 'DELIVERED'],
