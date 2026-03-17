@@ -1,211 +1,291 @@
 {% extends 'base.html' %}
 {% block title %}Comanda {{ order.order_number }} - BackyardFlow POS{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Status progress bar */
+.status-steps { display:flex; gap:0; margin-bottom:1.5rem; }
+.step {
+  flex:1; text-align:center; padding:8px 4px; font-size:.7rem;
+  background:#e9ecef; color:#6c757d; border-right:2px solid #fff;
+  font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  transition: background .2s;
+}
+.step:first-child { border-radius:10px 0 0 10px; }
+.step:last-child  { border-radius:0 10px 10px 0; border-right:none; }
+.step.active  { background:#0d6efd; color:#fff; }
+.step.done    { background:#198754; color:#fff; }
+.step.danger  { background:#dc3545; color:#fff; }
+
+/* Item cards */
+.item-row { border-radius:12px; border:1px solid rgba(0,0,0,.08); padding:12px 14px; margin-bottom:8px; transition: background .15s; }
+.item-row:hover { background: rgba(0,0,0,.03); }
+.item-row.status-ready    { border-left: 4px solid #198754; }
+.item-row.status-preparing{ border-left: 4px solid #0d6efd; }
+.item-row.status-delivered{ border-left: 4px solid #6c757d; opacity:.7; }
+.item-row.status-cancelled{ border-left: 4px solid #dc3545; opacity:.5; text-decoration:line-through; }
+
+/* Add item panel */
+.add-item-panel { border-radius:14px; }
+.menu-item-btn {
+  border-radius:10px; border:1px solid rgba(0,0,0,.12); padding:8px 10px;
+  cursor:pointer; transition:all .12s; font-size:.82rem; text-align:left;
+  background: var(--bs-body-bg);
+}
+.menu-item-btn:hover, .menu-item-btn.selected { background:#0d6efd; color:#fff; border-color:#0d6efd; }
+.menu-item-btn .price { font-size:.72rem; opacity:.75; }
+.cat-tab { border-radius:20px; padding:4px 14px; font-size:.8rem; cursor:pointer; border:1px solid #dee2e6; background:var(--bs-body-bg); }
+.cat-tab.active { background:#0d6efd; color:#fff; border-color:#0d6efd; }
+
+/* Sticky totals */
+.totals-card { position: sticky; top: 80px; }
+
+.action-status-btn { border-radius:10px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold"><i class="fas fa-receipt me-2"></i>{{ order.order_number }}</h2>
-        <div class="d-flex gap-2 flex-wrap">
-            {% if order.status not in 'PAID,CANCELLED' %}
-            <a href="{% url 'cash_register:process_payment' order.pk %}" class="btn btn-success">
-                <i class="fas fa-dollar-sign me-1"></i>Cobrar
-            </a>
-            {% endif %}
-            <a href="{% url 'orders:dashboard' %}" class="btn btn-outline-secondary">Volver</a>
-        </div>
+<div class="container-fluid py-3">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold mb-0">
+        <i class="fas fa-receipt me-2 text-primary"></i>{{ order.order_number }}
+        {% if order.table %}<span class="badge bg-dark ms-2 fs-6">Mesa {{ order.table.number }}</span>{% endif %}
+      </h4>
+      <small class="text-muted">{{ order.created_at|date:"d/m/Y H:i" }} · {{ order.get_order_type_display }} · Mozo: {{ order.waiter|default:"Virtual" }}</small>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if order.status not in 'PAID,CANCELLED' %}
+      <a href="{% url 'cash_register:process_payment' order.pk %}" class="btn btn-success">
+        <i class="fas fa-dollar-sign me-1"></i>Cobrar
+      </a>
+      {% endif %}
+      <a href="{% url 'orders:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+      </a>
+    </div>
+  </div>
 
-    <div class="row g-3">
-        <!-- Order Info -->
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-dark text-white">Informacion</div>
-                <div class="card-body">
-                    <p class="mb-2">
-                        <strong>Estado:</strong>
-                        <span class="badge
-                            {% if order.status == 'PENDING' %}bg-warning text-dark
-                            {% elif order.status == 'IN_PROGRESS' %}bg-primary
-                            {% elif order.status == 'READY' %}bg-success
-                            {% elif order.status == 'PAID' %}bg-success
-                            {% elif order.status == 'CANCELLED' %}bg-danger
-                            {% else %}bg-info{% endif %} ms-1">
-                            {{ order.get_status_display }}
-                        </span>
-                    </p>
-                    <p class="mb-2"><strong>Mesa:</strong> {{ order.table|default:"Para Llevar" }}</p>
-                    <p class="mb-2"><strong>Tipo:</strong> {{ order.get_order_type_display }}</p>
-                    <p class="mb-2"><strong>Mozo:</strong> {{ order.waiter|default:"Virtual" }}</p>
-                    <p class="mb-2"><strong>Creada:</strong> {{ order.created_at|date:"d/m/Y H:i" }}</p>
-                    {% if order.notes %}
-                    <p class="mb-0"><strong>Notas:</strong> {{ order.notes }}</p>
-                    {% endif %}
-                </div>
-            </div>
+  <!-- Status steps -->
+  {% if order.status != 'CANCELLED' %}
+  <div class="status-steps mb-3">
+    <div class="step {% if order.status == 'PENDING' %}active{% elif order.status != 'CANCELLED' %}done{% endif %}">
+      <i class="fas fa-clock d-block mb-1"></i>Pendiente
+    </div>
+    <div class="step {% if order.status == 'IN_PROGRESS' %}active{% elif order.status in 'READY,DELIVERED,PAID' %}done{% endif %}">
+      <i class="fas fa-fire d-block mb-1"></i>Preparando
+    </div>
+    <div class="step {% if order.status == 'READY' %}active{% elif order.status in 'DELIVERED,PAID' %}done{% endif %}">
+      <i class="fas fa-check d-block mb-1"></i>Listo
+    </div>
+    <div class="step {% if order.status == 'DELIVERED' %}active{% elif order.status == 'PAID' %}done{% endif %}">
+      <i class="fas fa-walking d-block mb-1"></i>Entregado
+    </div>
+    <div class="step {% if order.status == 'PAID' %}done{% endif %}">
+      <i class="fas fa-dollar-sign d-block mb-1"></i>Pagado
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-danger py-2"><i class="fas fa-times-circle me-2"></i>Comanda cancelada</div>
+  {% endif %}
 
-            <!-- Totals -->
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-dark text-white">Totales</div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <strong>${{ order.subtotal|floatformat:2 }}</strong>
-                    </div>
-                    {% if order.discount_percent > 0 %}
-                    <div class="d-flex justify-content-between mb-2 text-danger">
-                        <span>Descuento ({{ order.discount_percent }}%):</span>
-                        <strong>-${{ order.discount_amount|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    <div class="d-flex justify-content-between border-top pt-2">
-                        <strong>TOTAL:</strong>
-                        <strong class="text-primary fs-5">${{ order.total|floatformat:2 }}</strong>
-                    </div>
-                </div>
-            </div>
+  <div class="row g-3">
 
-            <!-- Change Status -->
-            {% if order.status not in 'PAID,CANCELLED' %}
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-dark text-white">Cambiar Estado</div>
-                <div class="card-body d-grid gap-2">
-                    {% if order.status != 'IN_PROGRESS' %}
-                    <button onclick="changeStatus('IN_PROGRESS')" class="btn btn-primary btn-sm">
-                        <i class="fas fa-fire me-1"></i>En Preparacion
-                    </button>
-                    {% endif %}
-                    {% if order.status == 'IN_PROGRESS' %}
-                    <button onclick="changeStatus('READY')" class="btn btn-success btn-sm">
-                        <i class="fas fa-check me-1"></i>Listo
-                    </button>
-                    {% endif %}
-                    {% if order.status == 'READY' %}
-                    <button onclick="changeStatus('DELIVERED')" class="btn btn-info btn-sm">
-                        <i class="fas fa-walking me-1"></i>Entregado
-                    </button>
-                    {% endif %}
-                    <button onclick="changeStatus('CANCELLED')" class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-times me-1"></i>Cancelar
-                    </button>
-                </div>
-            </div>
-            {% endif %}
+    <!-- Columna items (izquierda, más ancha) -->
+    <div class="col-lg-8">
+
+      <!-- Panel agregar item -->
+      {% if order.status not in 'PAID,CANCELLED' %}
+      <div class="card border-0 shadow-sm mb-3 add-item-panel">
+        <div class="card-header d-flex align-items-center gap-2 py-2">
+          <i class="fas fa-plus-circle text-success"></i><strong>Agregar ítem</strong>
         </div>
+        <div class="card-body">
+          <!-- Categorías -->
+          <div class="d-flex flex-wrap gap-2 mb-3" id="cat-tabs">
+            <button class="cat-tab active" onclick="filterCat(null, this)">Todo</button>
+            {% for cat in categories %}
+            <button class="cat-tab" onclick="filterCat({{ cat.pk }}, this)">{{ cat.name }}</button>
+            {% endfor %}
+          </div>
+          <!-- Grid de items -->
+          <div class="row g-2 mb-3" id="menu-grid">
+            {% for item in menu_items %}
+            <div class="col-6 col-sm-4 col-md-3 menu-item-col" data-cat="{{ item.category.pk|default:'' }}">
+              <button class="menu-item-btn w-100 h-100" onclick="selectItem({{ item.pk }}, '{{ item.name|escapejs }}', {{ item.price }}, this)">
+                <div class="fw-semibold">{{ item.name }}</div>
+                <div class="price">${{ item.price }}</div>
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+          <!-- Controles -->
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label small mb-1">Cantidad</label>
+              <div class="input-group input-group-sm" style="width:110px">
+                <button class="btn btn-outline-secondary" onclick="adjQty(-1)">−</button>
+                <input type="number" id="addItemQty" class="form-control text-center" value="1" min="1">
+                <button class="btn btn-outline-secondary" onclick="adjQty(1)">+</button>
+              </div>
+            </div>
+            <div class="col">
+              <label class="form-label small mb-1">Notas</label>
+              <input type="text" id="addItemNotes" class="form-control form-control-sm" placeholder="Sin cebollas, extra salsa…">
+            </div>
+            <div class="col-auto">
+              <button onclick="addItem()" id="btn-add" class="btn btn-success btn-sm" disabled>
+                <i class="fas fa-plus me-1"></i>Agregar
+              </button>
+            </div>
+          </div>
+          <div id="selected-label" class="text-muted small mt-2"></div>
+        </div>
+      </div>
+      {% endif %}
 
-        <!-- Order Items -->
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <span>Items</span>
-                    {% if order.status not in 'PAID,CANCELLED' %}
-                    <button class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#addItemPanel">
-                        <i class="fas fa-plus me-1"></i>Agregar Item
-                    </button>
-                    {% endif %}
+      <!-- Lista de items -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header d-flex align-items-center gap-2 py-2">
+          <i class="fas fa-list text-primary"></i><strong>Ítems de la comanda</strong>
+          <span class="badge bg-secondary ms-auto">{{ items|length }}</span>
+        </div>
+        <div class="card-body" id="items-container">
+          {% for item in items %}
+          <div class="item-row status-{{ item.status|lower }}" id="item-row-{{ item.pk }}">
+            <div class="d-flex align-items-start gap-3">
+              <div class="flex-grow-1">
+                <div class="fw-semibold">{{ item.menu_item.name }}</div>
+                {% if item.notes %}<div class="text-muted small">{{ item.notes }}</div>{% endif %}
+                <div class="d-flex align-items-center gap-2 mt-1">
+                  <span class="badge
+                    {% if item.status == 'PENDING' %}bg-warning text-dark
+                    {% elif item.status == 'PREPARING' %}bg-primary
+                    {% elif item.status == 'READY' %}bg-success
+                    {% elif item.status == 'DELIVERED' %}bg-secondary
+                    {% else %}bg-danger{% endif %}">
+                    {{ item.get_status_display }}
+                  </span>
+                  <span class="text-muted small">×{{ item.quantity }} · ${{ item.unit_price }}</span>
                 </div>
-
-                <!-- Add item panel -->
-                {% if order.status not in 'PAID,CANCELLED' %}
-                <div class="collapse" id="addItemPanel">
-                    <div class="card-body bg-light border-bottom">
-                        <div class="row g-2">
-                            <div class="col-md-5">
-                                <select id="addItemCategory" class="form-select form-select-sm" onchange="filterItems(this.value)">
-                                    <option value="">Todas las categorias</option>
-                                    {% for cat in categories %}
-                                    <option value="{{ cat.pk }}">{{ cat.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <select id="addItemSelect" class="form-select form-select-sm">
-                                    <option value="">Selecciona un item...</option>
-                                    {% for item in menu_items %}
-                                    <option value="{{ item.pk }}" data-price="{{ item.price }}" data-category="{{ item.category.pk|default:'' }}">
-                                        {{ item.name }} - ${{ item.price }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <input type="number" id="addItemQty" value="1" min="1" class="form-control form-control-sm">
-                            </div>
-                        </div>
-                        <div class="mt-2">
-                            <input type="text" id="addItemNotes" class="form-control form-control-sm" placeholder="Notas (opcional)">
-                        </div>
-                        <button onclick="addItem()" class="btn btn-success btn-sm mt-2">
-                            <i class="fas fa-plus me-1"></i>Agregar
-                        </button>
-                    </div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold">${{ item.subtotal }}</div>
+                <!-- Botones de estado -->
+                {% if item.status not in 'DELIVERED,CANCELLED' and order.status not in 'PAID,CANCELLED' %}
+                <div class="d-flex gap-1 mt-1 justify-content-end">
+                  {% if item.status == 'PENDING' %}
+                  <button onclick="updateItemStatus({{ item.pk }}, 'PREPARING')" class="btn btn-sm btn-outline-primary" title="Marcar preparando">
+                    <i class="fas fa-fire"></i>
+                  </button>
+                  {% elif item.status == 'PREPARING' %}
+                  <button onclick="updateItemStatus({{ item.pk }}, 'READY')" class="btn btn-sm btn-outline-success" title="Marcar listo">
+                    <i class="fas fa-check"></i>
+                  </button>
+                  {% elif item.status == 'READY' %}
+                  <button onclick="updateItemStatus({{ item.pk }}, 'DELIVERED')" class="btn btn-sm btn-outline-info" title="Marcar entregado">
+                    <i class="fas fa-walking"></i>
+                  </button>
+                  {% endif %}
+                  <button onclick="removeItem({{ order.pk }}, {{ item.pk }})" class="btn btn-sm btn-outline-danger" title="Cancelar ítem">
+                    <i class="fas fa-times"></i>
+                  </button>
                 </div>
                 {% endif %}
-
-                <!-- Items list -->
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table mb-0" id="items-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Estado</th>
-                                    <th>Qty</th>
-                                    <th>P. Unit.</th>
-                                    <th>Subtotal</th>
-                                    <th>Notas</th>
-                                    {% if order.status not in 'PAID,CANCELLED' %}<th></th>{% endif %}
-                                </tr>
-                            </thead>
-                            <tbody id="items-tbody">
-                                {% for item in items %}
-                                <tr id="item-row-{{ item.pk }}" class="{% if item.status == 'CANCELLED' %}table-secondary text-decoration-line-through{% elif item.status == 'READY' %}table-success{% endif %}">
-                                    <td><strong>{{ item.menu_item.name }}</strong></td>
-                                    <td>
-                                        <span class="badge
-                                            {% if item.status == 'PENDING' %}bg-warning text-dark
-                                            {% elif item.status == 'PREPARING' %}bg-primary
-                                            {% elif item.status == 'READY' %}bg-success
-                                            {% elif item.status == 'DELIVERED' %}bg-info
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ item.get_status_display }}
-                                        </span>
-                                        {% if item.status not in 'DELIVERED,CANCELLED' and order.status not in 'PAID,CANCELLED' %}
-                                        <div class="btn-group btn-group-sm mt-1">
-                                            {% if item.status == 'PENDING' %}
-                                            <button onclick="updateItemStatus({{ item.pk }}, 'PREPARING')" class="btn btn-outline-primary" title="Preparando"><i class="fas fa-fire"></i></button>
-                                            {% endif %}
-                                            {% if item.status == 'PREPARING' %}
-                                            <button onclick="updateItemStatus({{ item.pk }}, 'READY')" class="btn btn-outline-success" title="Listo"><i class="fas fa-check"></i></button>
-                                            {% endif %}
-                                            {% if item.status == 'READY' %}
-                                            <button onclick="updateItemStatus({{ item.pk }}, 'DELIVERED')" class="btn btn-outline-info" title="Entregado"><i class="fas fa-walking"></i></button>
-                                            {% endif %}
-                                        </div>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ item.quantity }}</td>
-                                    <td>${{ item.unit_price }}</td>
-                                    <td id="item-subtotal-{{ item.pk }}">${{ item.subtotal }}</td>
-                                    <td><small class="text-muted">{{ item.notes|default:"-" }}</small></td>
-                                    {% if order.status not in 'PAID,CANCELLED' %}
-                                    <td>
-                                        {% if item.status != 'CANCELLED' %}
-                                        <button onclick="removeItem({{ order.pk }}, {{ item.pk }})" class="btn btn-sm btn-outline-danger" title="Cancelar">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                        {% endif %}
-                                    </td>
-                                    {% endif %}
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="7" class="text-center text-muted py-3">Sin items</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+              </div>
             </div>
+          </div>
+          {% empty %}
+          <div class="text-center text-muted py-4">
+            <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>Sin ítems agregados
+          </div>
+          {% endfor %}
         </div>
+      </div>
+
     </div>
+
+    <!-- Columna derecha: info + totales + acciones -->
+    <div class="col-lg-4">
+
+      <!-- Totals -->
+      <div class="card border-0 shadow-sm mb-3 totals-card">
+        <div class="card-header py-2"><i class="fas fa-calculator me-2"></i><strong>Totales</strong></div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Subtotal</span>
+            <strong>${{ order.subtotal|floatformat:2 }}</strong>
+          </div>
+          {% if order.discount_percent > 0 %}
+          <div class="d-flex justify-content-between mb-2 text-danger">
+            <span>Descuento {{ order.discount_percent }}%</span>
+            <strong>−${{ order.discount_amount|floatformat:2 }}</strong>
+          </div>
+          {% endif %}
+          <div class="d-flex justify-content-between border-top pt-2 mt-1">
+            <strong class="fs-5">TOTAL</strong>
+            <strong class="fs-4 text-success">${{ order.total|floatformat:2 }}</strong>
+          </div>
+          {% if order.status not in 'PAID,CANCELLED' %}
+          <a href="{% url 'cash_register:process_payment' order.pk %}" class="btn btn-success w-100 mt-3">
+            <i class="fas fa-dollar-sign me-2"></i>Cobrar ahora
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Cambiar estado comanda -->
+      {% if order.status not in 'PAID,CANCELLED' %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header py-2"><i class="fas fa-exchange-alt me-2"></i><strong>Estado comanda</strong></div>
+        <div class="card-body d-grid gap-2">
+          {% if order.status == 'PENDING' %}
+          <button onclick="changeStatus('IN_PROGRESS')" class="btn btn-primary action-status-btn">
+            <i class="fas fa-fire me-2"></i>Iniciar preparación
+          </button>
+          {% endif %}
+          {% if order.status == 'IN_PROGRESS' %}
+          <button onclick="changeStatus('READY')" class="btn btn-success action-status-btn">
+            <i class="fas fa-check me-2"></i>Marcar lista
+          </button>
+          {% endif %}
+          {% if order.status == 'READY' %}
+          <button onclick="changeStatus('DELIVERED')" class="btn btn-info action-status-btn">
+            <i class="fas fa-walking me-2"></i>Marcar entregada
+          </button>
+          {% endif %}
+          <button onclick="if(confirm('¿Cancelar esta comanda?')) changeStatus('CANCELLED')" class="btn btn-outline-danger action-status-btn">
+            <i class="fas fa-times me-2"></i>Cancelar comanda
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Info -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header py-2"><i class="fas fa-info-circle me-2"></i><strong>Información</strong></div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-muted">Mesa</dt>
+            <dd class="col-7">{{ order.table|default:"Para Llevar" }}</dd>
+            <dt class="col-5 text-muted">Tipo</dt>
+            <dd class="col-7">{{ order.get_order_type_display }}</dd>
+            <dt class="col-5 text-muted">Mozo</dt>
+            <dd class="col-7">{{ order.waiter|default:"Virtual" }}</dd>
+            <dt class="col-5 text-muted">Creada</dt>
+            <dd class="col-7">{{ order.created_at|date:"d/m/Y H:i" }}</dd>
+            {% if order.notes %}
+            <dt class="col-5 text-muted">Notas</dt>
+            <dd class="col-7">{{ order.notes }}</dd>
+            {% endif %}
+          </dl>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -213,67 +293,97 @@
 <script>
 const orderId = {{ order.pk }};
 const csrfToken = '{{ csrf_token }}';
+let selectedItemId = null;
 
+/* ----- Selección de ítem en el grid ----- */
+function selectItem(id, name, price, btn) {
+  // Deseleccionar anterior
+  document.querySelectorAll('.menu-item-btn.selected').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedItemId = id;
+  document.getElementById('selected-label').textContent = `Seleccionado: ${name} — $${price}`;
+  document.getElementById('btn-add').disabled = false;
+}
+
+/* ----- Filtro de categoría ----- */
+function filterCat(catId, tab) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelectorAll('.menu-item-col').forEach(col => {
+    if (!catId || col.dataset.cat == catId) {
+      col.style.display = '';
+    } else {
+      col.style.display = 'none';
+    }
+  });
+  // Deseleccionar si estaba oculto
+  if (selectedItemId) {
+    const col = document.querySelector(`.menu-item-col [onclick*="selectItem(${selectedItemId},"]`);
+    if (col && col.closest('.menu-item-col').style.display === 'none') {
+      document.querySelectorAll('.menu-item-btn.selected').forEach(b => b.classList.remove('selected'));
+      selectedItemId = null;
+      document.getElementById('btn-add').disabled = true;
+      document.getElementById('selected-label').textContent = '';
+    }
+  }
+}
+
+/* ----- Cantidad ----- */
+function adjQty(delta) {
+  const input = document.getElementById('addItemQty');
+  const v = parseInt(input.value) + delta;
+  if (v >= 1) input.value = v;
+}
+
+/* ----- Agregar ítem ----- */
 function addItem() {
-    const itemId = document.getElementById('addItemSelect').value;
-    const qty = document.getElementById('addItemQty').value;
-    const notes = document.getElementById('addItemNotes').value;
-    if (!itemId) { alert('Selecciona un item'); return; }
+  if (!selectedItemId) return;
+  const qty   = document.getElementById('addItemQty').value;
+  const notes = document.getElementById('addItemNotes').value;
 
-    fetch(`/orders/${orderId}/add-item/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
-        body: `menu_item_id=${itemId}&quantity=${qty}&notes=${encodeURIComponent(notes)}`
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) { location.reload(); }
-        else { alert(data.error || 'Error al agregar item'); }
-    });
+  fetch(`/orders/${orderId}/add-item/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken },
+    body: `menu_item_id=${selectedItemId}&quantity=${qty}&notes=${encodeURIComponent(notes)}`
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) { location.reload(); }
+    else { alert(data.error || 'Error al agregar ítem'); }
+  });
 }
 
-function removeItem(orderId, itemId) {
-    if (!confirm('¿Cancelar este item?')) return;
-    fetch(`/orders/${orderId}/remove-item/${itemId}/`, {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrfToken}
-    })
-    .then(r => r.json())
-    .then(data => { if (data.success) { location.reload(); } });
+/* ----- Quitar ítem ----- */
+function removeItem(ordId, itemId) {
+  if (!confirm('¿Cancelar este ítem?')) return;
+  fetch(`/orders/${ordId}/remove-item/${itemId}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken }
+  })
+  .then(r => r.json())
+  .then(data => { if (data.success) location.reload(); });
 }
 
+/* ----- Estado ítem ----- */
 function updateItemStatus(itemId, status) {
-    fetch(`/orders/item/${itemId}/status/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
-        body: `status=${status}`
-    })
-    .then(r => r.json())
-    .then(data => { if (data.success) { location.reload(); } });
+  fetch(`/orders/item/${itemId}/status/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken },
+    body: `status=${status}`
+  })
+  .then(r => r.json())
+  .then(data => { if (data.success) location.reload(); });
 }
 
+/* ----- Estado comanda ----- */
 function changeStatus(status) {
-    fetch(`/orders/${orderId}/status/`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
-        body: `status=${status}`
-    })
-    .then(r => r.json())
-    .then(data => { if (data.success) { location.reload(); } });
-}
-
-function filterItems(categoryId) {
-    const select = document.getElementById('addItemSelect');
-    const options = select.querySelectorAll('option');
-    options.forEach(opt => {
-        if (!opt.value) return;
-        if (!categoryId || opt.dataset.category == categoryId) {
-            opt.style.display = '';
-        } else {
-            opt.style.display = 'none';
-        }
-    });
-    select.value = '';
+  fetch(`/orders/${orderId}/status/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken },
+    body: `status=${status}`
+  })
+  .then(r => r.json())
+  .then(data => { if (data.success) location.reload(); });
 }
 </script>
 {% endblock %}

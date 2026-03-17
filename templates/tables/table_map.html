@@ -1,171 +1,210 @@
 {% extends 'base.html' %}
 {% block title %}Mapa de Mesas - BackyardFlow POS{% endblock %}
+
+{% block extra_css %}
+<style>
+.table-card {
+    width: 150px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    position: relative;
+    overflow: hidden;
+}
+.table-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.18) !important; }
+.table-card .tc-body { padding: 14px 10px 12px; }
+.table-card .tc-num  { font-size: 2rem; font-weight: 800; line-height: 1; }
+.table-card .tc-status { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; opacity: .9; }
+.table-card .tc-cap   { font-size: .75rem; opacity: .75; margin-top: 4px; }
+.table-card .tc-order { font-size: .7rem; background: rgba(0,0,0,.18); border-radius: 6px; padding: 2px 6px; margin-top: 6px; }
+.table-card .tc-timer { font-size: .68rem; margin-top: 2px; opacity: .85; }
+
+.status-FREE      { background: linear-gradient(135deg,#28a745,#20c997); color:#fff; }
+.status-OCCUPIED  { background: linear-gradient(135deg,#dc3545,#c82333); color:#fff; }
+.status-RESERVED  { background: linear-gradient(135deg,#ffc107,#e0a800); color:#212529; }
+.status-CLEANING  { background: linear-gradient(135deg,#17a2b8,#138496); color:#fff; }
+
+.stat-pill { border-radius: 20px; padding: 6px 18px; font-size: .85rem; }
+.area-section { margin-bottom: 2rem; }
+.area-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--bs-secondary); margin-bottom: .75rem; border-left: 4px solid var(--bs-primary); padding-left: 8px; }
+
+/* Modal */
+.modal-table-header { font-size: 2.5rem; font-weight: 800; }
+.action-btn { border-radius: 12px; padding: 10px 14px; font-size: .85rem; }
+
+/* Order items preview */
+.item-chip { background: rgba(255,255,255,.15); border-radius: 8px; padding: 3px 8px; font-size: .75rem; margin: 2px; display: inline-block; }
+
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+.live-dot { width:8px;height:8px;border-radius:50%;background:#28a745;display:inline-block;animation:pulse-dot 1.5s infinite; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold"><i class="fas fa-table me-2 text-success"></i>Mapa de Mesas</h2>
-        <div class="d-flex gap-2">
-            <a href="{% url 'orders:order_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>Nueva Comanda
-            </a>
-            <a href="{% url 'tables:table_create' %}" class="btn btn-outline-success">
-                <i class="fas fa-plus me-1"></i>Nueva Mesa
-            </a>
-            <a href="{% url 'tables:area_create' %}" class="btn btn-outline-info">
-                <i class="fas fa-layer-group me-1"></i>Nueva Area
-            </a>
-            <a href="{% url 'tables:reservation_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-calendar me-1"></i>Reservas
-            </a>
-        </div>
-    </div>
+<div class="container-fluid py-3">
 
-    <!-- Stats bar -->
-    <div class="row g-2 mb-4">
-        <div class="col">
-            <div class="card border-0 bg-success text-white text-center py-2">
-                <strong>{{ stats.free }}</strong><small> Libres</small>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 bg-danger text-white text-center py-2">
-                <strong>{{ stats.occupied }}</strong><small> Ocupadas</small>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 bg-warning text-dark text-center py-2">
-                <strong>{{ stats.reserved }}</strong><small> Reservadas</small>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 bg-info text-white text-center py-2">
-                <strong>{{ stats.cleaning }}</strong><small> Limpieza</small>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 bg-dark text-white text-center py-2">
-                <strong>{{ stats.total }}</strong><small> Total</small>
-            </div>
-        </div>
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <h4 class="fw-bold mb-0"><i class="fas fa-table me-2 text-success"></i>Mapa de Mesas</h4>
+      <span class="live-dot ms-1" title="Auto-actualización activa"></span>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if can_orders %}
+      <a href="{% url 'orders:order_create' %}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus me-1"></i>Nueva Comanda
+      </a>
+      {% endif %}
+      {% if can_tables %}
+      <a href="{% url 'tables:table_create' %}" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-plus me-1"></i>Mesa
+      </a>
+      <a href="{% url 'tables:area_create' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-layer-group me-1"></i>Área
+      </a>
+      <a href="{% url 'tables:reservation_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-calendar me-1"></i>Reservas
+      </a>
+      {% endif %}
+    </div>
+  </div>
 
-    <!-- Legend -->
-    <div class="d-flex gap-3 mb-3 flex-wrap">
-        <span class="badge bg-success py-2 px-3">Libre</span>
-        <span class="badge bg-danger py-2 px-3">Ocupada</span>
-        <span class="badge bg-warning text-dark py-2 px-3">Reservada</span>
-        <span class="badge bg-info py-2 px-3">Limpieza</span>
+  <!-- Stats -->
+  <div class="d-flex gap-2 flex-wrap mb-4">
+    <div class="stat-pill bg-success text-white">
+      <i class="fas fa-check me-1"></i><strong>{{ stats.free }}</strong> Libres
     </div>
+    <div class="stat-pill bg-danger text-white">
+      <i class="fas fa-users me-1"></i><strong>{{ stats.occupied }}</strong> Ocupadas
+    </div>
+    <div class="stat-pill bg-warning text-dark">
+      <i class="fas fa-calendar me-1"></i><strong>{{ stats.reserved }}</strong> Reservadas
+    </div>
+    <div class="stat-pill bg-info text-white">
+      <i class="fas fa-broom me-1"></i><strong>{{ stats.cleaning }}</strong> Limpieza
+    </div>
+    <div class="stat-pill bg-secondary text-white ms-auto">
+      <i class="fas fa-table me-1"></i><strong>{{ stats.total }}</strong> Total
+    </div>
+  </div>
 
-    <!-- Areas with tables -->
-    {% for area in areas %}
-    <div class="mb-4">
-        <h5 class="fw-bold border-bottom pb-2"><i class="fas fa-layer-group me-2"></i>{{ area.name }}</h5>
-        <div class="d-flex flex-wrap gap-3">
-            {% for table in area.tables.all %}
-            {% if table.active %}
-            <div class="table-card card border-0 shadow-sm" style="width: 130px; cursor: pointer;"
-                 onclick="openTableModal({{ table.pk }}, '{{ table.get_status_display }}', '{{ table.status }}')"
-                 data-table-id="{{ table.pk }}">
-                <div class="card-body text-center p-3 {% if table.status == 'FREE' %}bg-success text-white{% elif table.status == 'OCCUPIED' %}bg-danger text-white{% elif table.status == 'RESERVED' %}bg-warning text-dark{% else %}bg-info text-white{% endif %} rounded">
-                    <div class="fs-4 fw-bold">{{ table.number }}</div>
-                    <div class="small">{{ table.get_status_display }}</div>
-                    <div class="small opacity-75"><i class="fas fa-users me-1"></i>{{ table.capacity }}</div>
-                    {% if table.status == 'OCCUPIED' %}
-                    <a href="{% url 'orders:order_create' %}?table={{ table.pk }}" class="btn btn-sm btn-light mt-1" onclick="event.stopPropagation()">
-                        <i class="fas fa-plus"></i>
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% endfor %}
+  <!-- Areas -->
+  {% for area in areas %}
+  <div class="area-section">
+    <div class="area-label"><i class="fas fa-layer-group me-1"></i>{{ area.name }}</div>
+    <div class="d-flex flex-wrap gap-3">
+      {% for table in area.tables.all %}{% if table.active %}
+      <div class="table-card shadow-sm status-{{ table.status }} text-center"
+           onclick="openTableModal({{ table.pk }}, '{{ table.number }}', '{{ table.get_status_display }}', '{{ table.status }}')"
+           data-table-id="{{ table.pk }}">
+        <div class="tc-body">
+          <div class="tc-num">{{ table.number }}</div>
+          <div class="tc-cap"><i class="fas fa-users me-1"></i>{{ table.capacity }}</div>
+          <div class="tc-status">{{ table.get_status_display }}</div>
+          {% if table.status == 'OCCUPIED' %}
+            {% with order=table.orders.filter %}
+            <div class="tc-order"><i class="fas fa-receipt me-1"></i>Comanda activa</div>
+            {% endwith %}
+          {% endif %}
         </div>
+      </div>
+      {% endif %}{% endfor %}
     </div>
-    {% endfor %}
+  </div>
+  {% endfor %}
 
-    <!-- Tables without area -->
-    {% if tables_no_area %}
-    <div class="mb-4">
-        <h5 class="fw-bold border-bottom pb-2"><i class="fas fa-table me-2"></i>Sin Area Asignada</h5>
-        <div class="d-flex flex-wrap gap-3">
-            {% for table in tables_no_area %}
-            {% if table.active %}
-            <div class="table-card card border-0 shadow-sm" style="width: 130px; cursor: pointer;"
-                 onclick="openTableModal({{ table.pk }}, '{{ table.get_status_display }}', '{{ table.status }}')"
-                 data-table-id="{{ table.pk }}">
-                <div class="card-body text-center p-3 {% if table.status == 'FREE' %}bg-success text-white{% elif table.status == 'OCCUPIED' %}bg-danger text-white{% elif table.status == 'RESERVED' %}bg-warning text-dark{% else %}bg-info text-white{% endif %} rounded">
-                    <div class="fs-4 fw-bold">{{ table.number }}</div>
-                    <div class="small">{{ table.get_status_display }}</div>
-                    <div class="small opacity-75"><i class="fas fa-users me-1"></i>{{ table.capacity }}</div>
-                </div>
-            </div>
-            {% endif %}
-            {% endfor %}
+  {% if tables_no_area %}
+  <div class="area-section">
+    <div class="area-label"><i class="fas fa-table me-1"></i>Sin Área Asignada</div>
+    <div class="d-flex flex-wrap gap-3">
+      {% for table in tables_no_area %}{% if table.active %}
+      <div class="table-card shadow-sm status-{{ table.status }} text-center"
+           onclick="openTableModal({{ table.pk }}, '{{ table.number }}', '{{ table.get_status_display }}', '{{ table.status }}')"
+           data-table-id="{{ table.pk }}">
+        <div class="tc-body">
+          <div class="tc-num">{{ table.number }}</div>
+          <div class="tc-cap"><i class="fas fa-users me-1"></i>{{ table.capacity }}</div>
+          <div class="tc-status">{{ table.get_status_display }}</div>
         </div>
+      </div>
+      {% endif %}{% endfor %}
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    <!-- Today's Reservations -->
-    {% if today_reservations %}
-    <div class="card border-0 shadow-sm mt-4">
-        <div class="card-header bg-dark text-white">
-            <i class="fas fa-calendar me-2"></i>Reservas de Hoy
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr><th>Hora</th><th>Cliente</th><th>Mesa</th><th>Personas</th><th>Estado</th><th>Accion</th></tr>
-                </thead>
-                <tbody>
-                    {% for res in today_reservations %}
-                    <tr>
-                        <td>{{ res.time|time:"H:i" }}</td>
-                        <td><strong>{{ res.customer_name }}</strong><br><small>{{ res.customer_phone }}</small></td>
-                        <td>Mesa {{ res.table.number }}</td>
-                        <td>{{ res.party_size }}</td>
-                        <td><span class="badge bg-{% if res.status == 'CONFIRMED' %}success{% else %}warning text-dark{% endif %}">{{ res.get_status_display }}</span></td>
-                        <td><a href="{% url 'tables:reservation_update' res.pk %}" class="btn btn-sm btn-outline-primary">Gestionar</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Reservas de hoy -->
+  {% if today_reservations %}
+  <div class="card border-0 shadow-sm mt-2">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="fas fa-calendar text-warning"></i><strong>Reservas de Hoy</strong>
+      <span class="badge bg-warning text-dark ms-1">{{ today_reservations|length }}</span>
     </div>
-    {% endif %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr><th>Hora</th><th>Cliente</th><th>Mesa</th><th>Personas</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for res in today_reservations %}
+          <tr>
+            <td><strong>{{ res.time|time:"H:i" }}</strong></td>
+            <td>{{ res.customer_name }}<br><small class="text-muted">{{ res.customer_phone }}</small></td>
+            <td>Mesa {{ res.table.number }}</td>
+            <td>{{ res.party_size }}</td>
+            <td><span class="badge bg-{% if res.status == 'CONFIRMED' %}success{% else %}warning text-dark{% endif %}">{{ res.get_status_display }}</span></td>
+            <td><a href="{% url 'tables:reservation_update' res.pk %}" class="btn btn-sm btn-outline-primary">Gestionar</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 
-<!-- Table Status Modal -->
+<!-- Modal de mesa -->
 <div class="modal fade" id="tableModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h6 class="modal-title">Cambiar Estado de Mesa</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-3">Estado actual: <strong id="current-status"></strong></p>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-success" onclick="changeStatus('FREE')"><i class="fas fa-check me-1"></i>Libre</button>
-                    <button class="btn btn-danger" onclick="changeStatus('OCCUPIED')"><i class="fas fa-users me-1"></i>Ocupada</button>
-                    <button class="btn btn-warning text-dark" onclick="changeStatus('RESERVED')"><i class="fas fa-calendar me-1"></i>Reservada</button>
-                    <button class="btn btn-info" onclick="changeStatus('CLEANING')"><i class="fas fa-broom me-1"></i>Limpieza</button>
-                </div>
-                <hr>
-                <div class="d-grid gap-2">
-                    <a id="new-order-btn" href="#" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-receipt me-1"></i>Nueva Comanda
-                    </a>
-                    <a id="edit-table-btn" href="#" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-edit me-1"></i>Editar Mesa
-                    </a>
-                    <a id="gen-qr-btn" href="#" class="btn btn-outline-dark btn-sm">
-                        <i class="fas fa-qrcode me-1"></i>Generar QR
-                    </a>
-                </div>
-            </div>
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content border-0 shadow-lg overflow-hidden">
+      <div id="modal-header-band" class="py-3 px-3 text-center">
+        <div class="modal-table-header" id="modal-table-num">—</div>
+        <div class="fw-semibold" id="modal-table-status">—</div>
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+
+        <!-- Acciones rápidas -->
+        <div class="d-grid gap-2 mb-3" id="quick-actions">
+          <a id="btn-new-order" href="#" class="btn btn-success action-btn">
+            <i class="fas fa-receipt me-2"></i>Nueva Comanda
+          </a>
+          <a id="btn-view-order" href="#" class="btn btn-primary action-btn d-none">
+            <i class="fas fa-eye me-2"></i>Ver Comanda activa
+          </a>
         </div>
+
+        <!-- Cambiar estado -->
+        <p class="text-muted small mb-2 fw-semibold">CAMBIAR ESTADO</p>
+        <div class="d-grid gap-2 mb-3">
+          <button class="btn btn-outline-success action-btn" onclick="changeStatus('FREE')"><i class="fas fa-check me-2"></i>Libre</button>
+          <button class="btn btn-outline-danger action-btn" onclick="changeStatus('OCCUPIED')"><i class="fas fa-users me-2"></i>Ocupada</button>
+          <button class="btn btn-outline-warning action-btn text-dark" onclick="changeStatus('RESERVED')"><i class="fas fa-calendar me-2"></i>Reservada</button>
+          <button class="btn btn-outline-info action-btn" onclick="changeStatus('CLEANING')"><i class="fas fa-broom me-2"></i>Limpieza</button>
+        </div>
+
+        <!-- Links secundarios -->
+        <div class="d-flex gap-2">
+          <a id="btn-edit-table" href="#" class="btn btn-sm btn-outline-secondary flex-fill">
+            <i class="fas fa-edit me-1"></i>Editar
+          </a>
+          <a id="btn-qr" href="#" class="btn btn-sm btn-outline-dark flex-fill">
+            <i class="fas fa-qrcode me-1"></i>QR
+          </a>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -173,32 +212,55 @@
 <script>
 let currentTableId = null;
 
-function openTableModal(tableId, statusDisplay, status) {
-    currentTableId = tableId;
-    document.getElementById('current-status').textContent = statusDisplay;
-    document.getElementById('new-order-btn').href = '/orders/create/?table=' + tableId;
-    document.getElementById('edit-table-btn').href = '/tables/' + tableId + '/edit/';
-    document.getElementById('gen-qr-btn').href = '/tables/' + tableId + '/qr/';
-    new bootstrap.Modal(document.getElementById('tableModal')).show();
+const statusConfig = {
+  FREE:     { bg: 'linear-gradient(135deg,#28a745,#20c997)', color: '#fff', label: 'Libre' },
+  OCCUPIED: { bg: 'linear-gradient(135deg,#dc3545,#c82333)', color: '#fff', label: 'Ocupada' },
+  RESERVED: { bg: 'linear-gradient(135deg,#ffc107,#e0a800)', color: '#212529', label: 'Reservada' },
+  CLEANING: { bg: 'linear-gradient(135deg,#17a2b8,#138496)', color: '#fff', label: 'Limpieza' },
+};
+
+function openTableModal(tableId, tableNum, statusDisplay, status) {
+  currentTableId = tableId;
+  const cfg = statusConfig[status] || statusConfig.FREE;
+
+  document.getElementById('modal-header-band').style.background = cfg.bg;
+  document.getElementById('modal-header-band').style.color = cfg.color;
+  document.getElementById('modal-table-num').textContent = 'Mesa ' + tableNum;
+  document.getElementById('modal-table-status').textContent = statusDisplay;
+
+  document.getElementById('btn-new-order').href = '/orders/create/?table=' + tableId;
+  document.getElementById('btn-edit-table').href = '/tables/' + tableId + '/edit/';
+  document.getElementById('btn-qr').href = '/tables/' + tableId + '/qr/';
+
+  // Mostrar "Ver Comanda" solo si está ocupada
+  const btnView = document.getElementById('btn-view-order');
+  if (status === 'OCCUPIED') {
+    btnView.classList.remove('d-none');
+    btnView.href = '/orders/?table=' + tableId;
+  } else {
+    btnView.classList.add('d-none');
+  }
+
+  new bootstrap.Modal(document.getElementById('tableModal')).show();
 }
 
 function changeStatus(status) {
-    if (!currentTableId) return;
-    fetch('/tables/' + currentTableId + '/status/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: 'status=' + status
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('tableModal')).hide();
-            setTimeout(() => location.reload(), 300);
-        }
-    });
+  if (!currentTableId) return;
+  fetch('/tables/' + currentTableId + '/status/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
+    body: 'status=' + status
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      bootstrap.Modal.getInstance(document.getElementById('tableModal')).hide();
+      setTimeout(() => location.reload(), 200);
+    }
+  });
 }
+
+// Auto-refresh cada 45 seg
+setTimeout(() => location.reload(), 45000);
 </script>
 {% endblock %}
