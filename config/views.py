@@ -141,9 +141,10 @@ def system_settings(request):
 @login_required
 @staff_required
 def cash_register_list(request):
-    from cash_register.models import CashRegister, CashSession
+    from cash_register.models import CashRegister
+    from django.db.models import Q
     registers = CashRegister.objects.annotate(
-        open_sessions=Count('cashsession', filter=__import__('django.db.models', fromlist=['Q']).Q(cashsession__status='OPEN'))
+        open_sessions=Count('sessions', filter=Q(sessions__status='OPEN'))
     ).order_by('name')
     return render(request, 'config/cash_register_list.html', {'registers': registers})
 
